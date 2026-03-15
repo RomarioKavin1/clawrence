@@ -8,7 +8,7 @@ import {MockDIAOracle} from "./mocks/MockDIAOracle.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockERC8004} from "./mocks/MockERC8004.sol";
 
-/// @notice The test contract IS the agent (owner). Full lifecycle tests.
+/// Broker model: agent deposits own BTC, Clawrence (this contract = owner) brokers borrows.
 contract IntegrationTest is Test {
     ClawrenceVault vault;
     CreditScore cs;
@@ -16,7 +16,8 @@ contract IntegrationTest is Test {
     MockERC20 usdc;
     MockERC8004 registry;
 
-    uint128 constant BTC_PRICE = 200_000_000_000; // $2000 with 8 decimals
+    address agent = address(0xA6E47);
+    uint128 constant BTC_PRICE = 200_000_000_000;
 
     function setUp() public {
         usdc     = new MockERC20("USDC", "USDC", 6);
@@ -26,69 +27,67 @@ contract IntegrationTest is Test {
         vault    = new ClawrenceVault(address(usdc), address(oracle), address(cs));
         cs.setVault(address(vault));
         usdc.mint(address(vault), 1_000_000e6);
-        vm.deal(address(this), 10 ether);
-        usdc.approve(address(vault), type(uint256).max);
+        vm.deal(agent, 10 ether);
+        // agent approves USDC for direct repayments
+        vm.prank(agent); usdc.approve(address(vault), type(uint256).max);
     }
 
-    receive() external payable {}
-
     function test_fullCreditJourney() public {
-        assertEq(cs.getScore(address(this)), 50);
-        assertEq(cs.getLTV(address(this)), 75);
+        assertEq(cs.getScore(agent), 50);
+        assertEq(cs.getLTV(agent), 75);
 
-        // Round 1: deposit 1 BTC, borrow 500 USDC (~33% util of 1500 max), hold >24h
-        vault.deposit{value: 1 ether}();
-        vault.borrow(500e6);
+        // Agent deposits BTC directly
+        vm.prank(agent); vault.deposit{value: 1 ether}();
+
+        // Round 1: Clawrence brokers the borrow, agent repays directly
+        vault.borrow(agent, 500e6);
         vm.warp(block.timestamp + 25 hours);
         oracle.setPrice(BTC_PRICE);
-        vault.repay(500e6);
+        vm.prank(agent); vault.repay(agent, 500e6);
 
-        uint256 score1 = cs.getScore(address(this));
+        uint256 score1 = cs.getScore(agent);
         assertGt(score1, 50);
         console.log("Score after round 1:", score1);
 
         // Round 2
         vm.warp(block.timestamp + 6 hours);
         oracle.setPrice(BTC_PRICE);
-        vault.borrow(500e6);
+        vault.borrow(agent, 500e6);
         vm.warp(block.timestamp + 25 hours);
         oracle.setPrice(BTC_PRICE);
-        vault.repay(500e6);
+        vm.prank(agent); vault.repay(agent, 500e6);
 
-        uint256 score2 = cs.getScore(address(this));
+        uint256 score2 = cs.getScore(agent);
         assertGt(score2, score1);
         console.log("Score after round 2:", score2);
 
-        // Round 3: streak of 3 triggers bonus
+        // Round 3: streak bonus
         vm.warp(block.timestamp + 6 hours);
         oracle.setPrice(BTC_PRICE);
-        vault.borrow(500e6);
+        vault.borrow(agent, 500e6);
         vm.warp(block.timestamp + 25 hours);
         oracle.setPrice(BTC_PRICE);
-        vault.repay(500e6);
+        vm.prank(agent); vault.repay(agent, 500e6);
 
-        uint256 score3 = cs.getScore(address(this));
+        uint256 score3 = cs.getScore(agent);
         assertGt(score3, score2);
         console.log("Score after round 3 (streak):", score3);
-        assertGe(cs.getLTV(address(this)), 75);
-        console.log("Final LTV:", cs.getLTV(address(this)));
+        assertGe(cs.getLTV(agent), 75);
+        console.log("Final LTV:", cs.getLTV(agent));
     }
 
     function test_liquidationScenario() public {
-        vault.deposit{value: 1 ether}();
-        vault.borrow(1_000e6);
+        vm.prank(agent); vault.deposit{value: 1 ether}();
+        vault.borrow(agent, 1_000e6);
 
-        uint256 scoreBefore = cs.getScore(address(this));
-
-        // Crash BTC to $900
+        uint256 scoreBefore = cs.getScore(agent);
         oracle.setPrice(90_000_000_000);
-        assertLt(vault.getHealthFactor(address(this)), 100);
+        assertLt(vault.getHealthFactor(agent), 100);
 
         address liquidator = address(0xDEAD);
-        vm.prank(liquidator);
-        vault.liquidate(address(this));
+        vm.prank(liquidator); vault.liquidate(agent);
 
-        assertEq(vault.debt(address(this)), 0);
-        assertLt(cs.getScore(address(this)), scoreBefore);
+        assertEq(vault.debt(agent), 0);
+        assertLt(cs.getScore(agent), scoreBefore);
     }
 }

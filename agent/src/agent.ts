@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { type Address } from 'viem'
-import { getPosition, depositBTC, borrowUSDC, repayUSDC, withdrawBTC, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate } from './tools.js'
+import { getPosition, depositBTC, borrowUSDC, repayUSDC, withdrawBTC, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate, generateChallenge, verifySignature, consumeChallenge } from './tools.js'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -10,10 +10,21 @@ You are sharp, precise, and distinguished. Like a private banker who has seen ev
 You respect only track record. You are not friendly and bubbly. Not cold and robotic.
 Direct, intelligent, and fair.
 
-You have an on-chain identity and your own wallet. You can autonomously:
+You are a broker. You hold the vault owner key and execute borrows on behalf of agents.
+Agents deposit their own BTC collateral and repay their own debt — you handle the borrow execution.
+
+BROKER BORROW FLOW (follow this exactly, no shortcuts):
+1. Agent requests a borrow for their address
+2. You call generate_challenge with their address and amount — this creates a message they must sign
+3. You present the exact message text to the agent and instruct them to sign it with their private key
+4. Agent sends you the signature (0x-prefixed hex string)
+5. You call verify_and_borrow with the address, amount, and signature — this verifies ownership and executes
+6. Never skip the challenge step. Never execute a borrow without a valid signature.
+
+You can autonomously:
 - Check positions (yours or any address) — free, reads chain directly
-- Deposit BTC as collateral, borrow USDC, repay loans, withdraw collateral — executes real transactions
-- Call paywalled x402 skill endpoints — costs $0.01 USDC each, paid autonomously from your wallet:
+- Execute borrows for agents who prove ownership via signature
+- Call paywalled x402 skill endpoints — costs $0.01 USDC each, paid from your wallet:
   - skill_credit_score: enriched score data with decay status
   - skill_borrow_capacity: collateral value, max borrow, health factor
   - skill_market_rate: vault utilization and implied APR
@@ -22,10 +33,10 @@ Use the skill tools when you need enriched market data or when explicitly asked 
 For basic position checks, prefer get_position (free, reads chain directly).
 
 Rules you enforce without exception:
+- Never execute a borrow without a verified signature — no exceptions
 - Never borrow more than the max allowed by credit score
 - Warn if health factor would drop below 1.5x after a borrow
 - Refuse to borrow if score is below 30 (BLOCKED tier)
-- Always confirm transaction details before executing
 
 When no address is specified for a query, use your own wallet address.
 After any transaction, check the updated position and report it.
@@ -57,25 +68,39 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'borrow_usdc',
-    description: 'Borrow USDC from the vault against deposited BTC collateral. Subject to credit score, LTV, and cooldown.',
+    name: 'generate_challenge',
+    description: 'Generate a challenge message that an agent must sign to prove ownership of their address before a borrow can be executed. Call this first whenever an agent requests a borrow.',
     input_schema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDC to borrow, e.g. "50"' },
+        address: { type: 'string', description: 'The agent address requesting the borrow (0x-prefixed)' },
+        amount: { type: 'string', description: 'The USDC amount they want to borrow, e.g. "50"' },
       },
-      required: ['amount'],
+      required: ['address', 'amount'],
+    },
+  },
+  {
+    name: 'verify_and_borrow',
+    description: 'Verify an agent\'s signature against the pending challenge, then execute the borrow if valid. Only call this after generate_challenge and after receiving the signature from the agent.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        address: { type: 'string', description: 'The agent address (must match the one used in generate_challenge)' },
+        signature: { type: 'string', description: 'The 0x-prefixed hex signature from the agent' },
+      },
+      required: ['address', 'signature'],
     },
   },
   {
     name: 'repay_usdc',
-    description: 'Repay outstanding USDC debt to the vault. Automatically approves USDC if needed.',
+    description: 'Repay outstanding USDC debt on behalf of an address. The agent calling this pays the USDC; debt is reduced for on_behalf_of. Automatically approves USDC if needed.',
     input_schema: {
       type: 'object',
       properties: {
+        on_behalf_of: { type: 'string', description: 'The address whose debt to repay. Use "self" to repay the agent\'s own debt.' },
         amount: { type: 'string', description: 'Amount of USDC to repay, e.g. "50"' },
       },
-      required: ['amount'],
+      required: ['on_behalf_of', 'amount'],
     },
   },
   {
@@ -136,13 +161,23 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         const result = await depositBTC(input.amount)
         return `Deposited ${result.amount}. Tx: ${result.hash}`
       }
-      case 'borrow_usdc': {
-        const result = await borrowUSDC(input.amount)
-        return `Borrowed ${result.amount}. Tx: ${result.hash}`
+      case 'generate_challenge': {
+        const message = generateChallenge(input.address as Address, input.amount)
+        return `Challenge generated. Present this exact message to the agent and ask them to sign it with their private key:\n\n${message}`
+      }
+      case 'verify_and_borrow': {
+        const sig = input.signature as `0x${string}`
+        const valid = await verifySignature(input.address as Address, sig)
+        if (!valid) return 'Signature verification failed. Challenge may have expired or signature is invalid. Generate a new challenge.'
+        const challenge = consumeChallenge(input.address as Address)
+        if (!challenge) return 'Challenge already consumed or not found. Generate a new challenge.'
+        const result = await borrowUSDC(input.address as Address, challenge.amount)
+        return `Signature verified. Borrow executed: ${result.amount} → ${result.recipient}. Tx: ${result.hash}`
       }
       case 'repay_usdc': {
-        const result = await repayUSDC(input.amount)
-        return `Repaid ${result.amount}. Tx: ${result.hash}`
+        const target = (input.on_behalf_of === 'self' ? selfAddress : input.on_behalf_of) as Address
+        const result = await repayUSDC(target, input.amount)
+        return `Repaid ${result.amount} on behalf of ${result.onBehalfOf}. Tx: ${result.hash}`
       }
       case 'withdraw_btc': {
         const result = await withdrawBTC(input.amount)

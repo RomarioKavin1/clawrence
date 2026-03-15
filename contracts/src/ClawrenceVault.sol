@@ -30,7 +30,7 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
 
     event Deposited(address indexed agent, uint256 amount);
     event Withdrawn(address indexed agent, uint256 amount);
-    event Borrowed(address indexed agent, uint256 amount, uint256 healthFactor);
+    event Borrowed(address indexed recipient, uint256 amount, uint256 healthFactor);
     event Repaid(address indexed agent, uint256 amount, uint256 newScore);
     event Liquidated(address indexed agent, address indexed liquidator, uint256 collateralSeized);
 
@@ -50,14 +50,15 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         creditScore = ICreditScore(_creditScore);
     }
 
-    /// @notice Deposit native BTC as collateral — only the agent (owner) can call
-    function deposit() external payable onlyOwner nonReentrant {
+    /// @notice Anyone can deposit native BTC as collateral for their own address.
+    function deposit() external payable nonReentrant {
         if (msg.value == 0) revert ZeroAmount();
         collateral[msg.sender] += msg.value;
         emit Deposited(msg.sender, msg.value);
     }
 
-    function withdraw(uint256 amount) external onlyOwner nonReentrant {
+    /// @notice Anyone can withdraw their own collateral.
+    function withdraw(uint256 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
         require(collateral[msg.sender] >= amount, "Insufficient collateral");
         collateral[msg.sender] -= amount;
@@ -70,40 +71,46 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function borrow(uint256 amount) external onlyOwner nonReentrant {
+    /// @notice Only Clawrence (owner) can execute borrows.
+    /// Debt is recorded against `recipient`; USDC is sent to `recipient`.
+    /// Clawrence verifies ownership off-chain via signature before calling this.
+    function borrow(address recipient, uint256 amount) external onlyOwner nonReentrant {
         if (amount == 0) revert ZeroAmount();
-        uint256 s = creditScore.getScore(msg.sender);
+        uint256 s = creditScore.getScore(recipient);
         if (s < MIN_SCORE) revert ScoreTooLow(s);
-        if (lastLoanTime[msg.sender] != 0 && block.timestamp - lastLoanTime[msg.sender] < BORROW_COOLDOWN)
-            revert CooldownActive(BORROW_COOLDOWN - (block.timestamp - lastLoanTime[msg.sender]));
-        uint256 maxBorrow = getMaxBorrow(msg.sender);
+        if (lastLoanTime[recipient] != 0 && block.timestamp - lastLoanTime[recipient] < BORROW_COOLDOWN)
+            revert CooldownActive(BORROW_COOLDOWN - (block.timestamp - lastLoanTime[recipient]));
+        uint256 maxBorrow = getMaxBorrow(recipient);
         if (amount > maxBorrow) revert ExceedsMaxBorrow(amount, maxBorrow);
-        debt[msg.sender] += amount;
-        uint256 hf = getHealthFactor(msg.sender);
+        debt[recipient] += amount;
+        uint256 hf = getHealthFactor(recipient);
         if (hf < HEALTH_FACTOR_MIN) revert HealthFactorTooLow(hf);
-        loanTimestamp[msg.sender] = block.timestamp;
-        lastLoanTime[msg.sender] = block.timestamp;
-        maxBorrowAtLoan[msg.sender] = maxBorrow + amount;
-        usdc.safeTransfer(msg.sender, amount);
-        emit Borrowed(msg.sender, amount, hf);
+        loanTimestamp[recipient] = block.timestamp;
+        lastLoanTime[recipient] = block.timestamp;
+        maxBorrowAtLoan[recipient] = maxBorrow + amount;
+        usdc.safeTransfer(recipient, amount);
+        emit Borrowed(recipient, amount, hf);
     }
 
-    function repay(uint256 amount) external onlyOwner nonReentrant {
-        if (debt[msg.sender] == 0) revert NoDebt();
+    /// @notice Anyone can repay debt on behalf of any address.
+    /// msg.sender provides the USDC; debt is reduced for `onBehalfOf`.
+    function repay(address onBehalfOf, uint256 amount) external nonReentrant {
+        if (debt[onBehalfOf] == 0) revert NoDebt();
         if (amount == 0) revert ZeroAmount();
-        uint256 loanAge = block.timestamp - loanTimestamp[msg.sender];
+        uint256 loanAge = block.timestamp - loanTimestamp[onBehalfOf];
         if (loanAge < MIN_LOAN_HOLD) revert LoanTooNew(MIN_LOAN_HOLD - loanAge);
-        uint256 actualRepay = amount > debt[msg.sender] ? debt[msg.sender] : amount;
+        uint256 actualRepay = amount > debt[onBehalfOf] ? debt[onBehalfOf] : amount;
         usdc.safeTransferFrom(msg.sender, address(this), actualRepay);
-        debt[msg.sender] -= actualRepay;
+        debt[onBehalfOf] -= actualRepay;
         bool onTime = loanAge <= LATE_THRESHOLD;
-        uint256 max = maxBorrowAtLoan[msg.sender];
+        uint256 max = maxBorrowAtLoan[onBehalfOf];
         if (max == 0) max = actualRepay;
-        creditScore.updateScore(msg.sender, actualRepay, max, loanAge, onTime);
-        uint256 newScore = creditScore.getScore(msg.sender);
-        emit Repaid(msg.sender, actualRepay, newScore);
+        creditScore.updateScore(onBehalfOf, actualRepay, max, loanAge, onTime);
+        uint256 newScore = creditScore.getScore(onBehalfOf);
+        emit Repaid(onBehalfOf, actualRepay, newScore);
     }
 
+    /// @notice Liquidate an undercollateralized position. Open to anyone.
     function liquidate(address agent) external nonReentrant {
         if (debt[agent] == 0) revert NoDebt();
         uint256 hf = getHealthFactor(agent);
