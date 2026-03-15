@@ -194,31 +194,13 @@ export function ClawrenceChat() {
       await publicClient.waitForTransactionReceipt({ hash })
       setTxStatus('Payment confirmed. Fetching data...')
 
-      // Step 3: Retry endpoint with X-Order-ID header
-      // Poll a few times — GoatX402 may need a moment to confirm
-      let data = null
-      for (let i = 0; i < 10; i++) {
-        const res = await fetch(skillTx.endpoint, {
-          headers: { 'X-Order-ID': skillTx.orderId },
-        })
+      // Step 3: Retry endpoint with X-Order-ID header immediately after receipt
+      const res = await fetch(skillTx.endpoint, {
+        headers: { 'X-Order-ID': skillTx.orderId },
+      })
 
-        if (res.ok) {
-          data = await res.json()
-          break
-        }
-
-        if (res.status === 402) {
-          // Payment not yet confirmed by GoatX402, wait and retry
-          setTxStatus(`Waiting for payment confirmation... (${i + 1}/10)`)
-          await new Promise(r => setTimeout(r, 3000))
-          continue
-        }
-
-        // Other error
-        throw new Error(`Skill server error: ${res.status}`)
-      }
-
-      if (data) {
+      if (res.ok) {
+        const data = await res.json()
         const lines = Object.entries(data)
           .map(([k, v]) => `  ${k}: ${v}`)
           .join('\n')
@@ -228,9 +210,10 @@ export function ClawrenceChat() {
           content: `Paid $0.10 USDC. Here's your data:\n\n${lines}\n\n— Clawrence`,
         }])
       } else {
+        const errBody = await res.text()
         setMessages(prev => [...prev, {
           role: 'clawrence',
-          content: 'Payment confirmed on-chain but verification is taking longer than expected. Try asking again in a minute.\n\n— Clawrence',
+          content: `Payment confirmed on-chain. Server returned: ${errBody}\n\nTry asking again.\n\n— Clawrence`,
         }])
       }
     } catch (err) {
