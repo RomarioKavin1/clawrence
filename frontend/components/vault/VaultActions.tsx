@@ -20,6 +20,7 @@ export function VaultActions() {
     abi: VAULT_ABI,
     functionName: 'getMaxBorrow',
     args: address ? [address] : undefined,
+    chainId: 48816,
     query: { enabled: !!address },
   })
 
