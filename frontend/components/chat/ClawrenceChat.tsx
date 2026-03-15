@@ -2,28 +2,30 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAccount, useWalletClient, usePublicClient } from 'wagmi'
-import { encodeFunctionData, parseEther, parseUnits } from 'viem'
-import { VAULT_ABI, ERC20_ABI, VAULT_ADDRESS, USDC_ADDRESS } from '@/lib/contracts'
+import { encodeFunctionData } from 'viem'
+import { VAULT_ABI, ERC20_ABI, USDC_ADDRESS } from '@/lib/contracts'
 
 interface Message {
   role: 'user' | 'clawrence'
   content: string
 }
 
+interface TxItem {
+  to: string
+  data: string
+  value: string
+  functionName: string
+  args?: unknown
+  chainId: number
+  step?: number
+  stepDescription?: string
+}
+
 interface TxData {
   type: 'transaction'
   action: string
   description: string
-  transactions: Array<{
-    to: string
-    data: string
-    value: string
-    functionName: string
-    args: unknown
-    chainId: number
-    step?: number
-    stepDescription?: string
-  }>
+  transactions: TxItem[]
 }
 
 interface SignData {
@@ -38,12 +40,24 @@ interface SignData {
   }
 }
 
+// x402 echo reference flow
+interface SkillTxData {
+  type: 'skill_transaction'
+  action: string
+  description: string
+  orderId: string
+  payToAddress: string
+  amountWei: string
+  tokenContract: string
+  chainId: number
+  endpoint: string
+}
+
 const WELCOME: Message = {
   role: 'clawrence',
   content: "I'm Clawrence. Not the bank. Better.\n\nConnect your wallet. I'll show you what you can borrow, and what you've earned.",
 }
 
-// Extract @@TX{...}@@TX blocks from text
 function extractTxBlocks(text: string): { clean: string; txBlocks: TxData[] } {
   const txBlocks: TxData[] = []
   const clean = text.replace(/@@TX([\s\S]*?)@@TX/g, (_, json) => {
@@ -53,7 +67,6 @@ function extractTxBlocks(text: string): { clean: string; txBlocks: TxData[] } {
   return { clean, txBlocks }
 }
 
-// Extract @@SIGN{...}@@SIGN blocks from text
 function extractSignBlocks(text: string): { clean: string; signBlocks: SignData[] } {
   const signBlocks: SignData[] = []
   const clean = text.replace(/@@SIGN([\s\S]*?)@@SIGN/g, (_, json) => {
@@ -62,6 +75,31 @@ function extractSignBlocks(text: string): { clean: string; signBlocks: SignData[
   })
   return { clean, signBlocks }
 }
+
+function extractSkillTxBlocks(text: string): { clean: string; skillTxBlocks: SkillTxData[] } {
+  const skillTxBlocks: SkillTxData[] = []
+  const clean = text.replace(/@@SKILL_TX([\s\S]*?)@@SKILL_TX/g, (_, json) => {
+    try { skillTxBlocks.push(JSON.parse(json)) } catch {}
+    return ''
+  })
+  return { clean, skillTxBlocks }
+}
+
+function cleanDisplayText(text: string): string {
+  return text
+    .replace(/@@TX[\s\S]*?@@TX/g, '')
+    .replace(/@@SIGN[\s\S]*?@@SIGN/g, '')
+    .replace(/@@SKILL_TX[\s\S]*?@@SKILL_TX/g, '')
+    .replace(/\[calling \w+\.\.\.\]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+const TRANSFER_ABI = [{
+  name: 'transfer', type: 'function', stateMutability: 'nonpayable',
+  inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }],
+  outputs: [{ type: 'bool' }],
+}] as const
 
 export function ClawrenceChat() {
   const [messages, setMessages] = useState<Message[]>([WELCOME])
@@ -77,7 +115,7 @@ export function ClawrenceChat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Execute a @@TX transaction via MetaMask
+  // @@TX — direct contract transactions via MetaMask
   const executeTx = useCallback(async (txData: TxData) => {
     if (!walletClient || !address || !publicClient) {
       setTxStatus('Connect your wallet first')
@@ -90,23 +128,16 @@ export function ClawrenceChat() {
         const desc = tx.stepDescription || tx.functionName
         setTxStatus(`${step}${desc} — confirm in wallet...`)
 
-        // For borrow/repay: replace placeholder address with connected wallet
         let txDataHex = tx.data as `0x${string}`
+
+        // Replace CONNECTED_WALLET placeholder for borrow/repay
         if (tx.functionName === 'borrow' && typeof tx.args === 'object' && tx.args !== null && 'recipient' in tx.args) {
           const args = tx.args as { recipient: string; amount: string }
-          txDataHex = encodeFunctionData({
-            abi: VAULT_ABI,
-            functionName: 'borrow',
-            args: [address, BigInt(args.amount)],
-          })
+          txDataHex = encodeFunctionData({ abi: VAULT_ABI, functionName: 'borrow', args: [address, BigInt(args.amount)] })
         }
         if (tx.functionName === 'repay' && typeof tx.args === 'object' && tx.args !== null && 'onBehalfOf' in tx.args) {
           const args = tx.args as { onBehalfOf: string; amount: string }
-          txDataHex = encodeFunctionData({
-            abi: VAULT_ABI,
-            functionName: 'repay',
-            args: [address, BigInt(args.amount)],
-          })
+          txDataHex = encodeFunctionData({ abi: VAULT_ABI, functionName: 'repay', args: [address, BigInt(args.amount)] })
         }
 
         const hash = await walletClient.sendTransaction({
@@ -119,10 +150,9 @@ export function ClawrenceChat() {
 
         setTxStatus(`${step}Confirming...`)
         await publicClient.waitForTransactionReceipt({ hash })
-        setTxStatus(`${step}Confirmed! Tx: ${hash.slice(0, 10)}...`)
+        setTxStatus(`${step}Confirmed!`)
       }
 
-      // Add success message to chat
       setMessages(prev => [...prev, {
         role: 'clawrence',
         content: `Transaction confirmed: ${txData.description}\n\n— Clawrence`,
@@ -135,7 +165,70 @@ export function ClawrenceChat() {
     }
   }, [walletClient, address, publicClient])
 
-  // Execute a @@SIGN request via MetaMask signTypedData, then send signature back
+  // @@SKILL_TX — x402 echo flow: pay USDC to payToAddress, then retry with X-Order-ID
+  const executeSkillTx = useCallback(async (skillTx: SkillTxData) => {
+    if (!walletClient || !address || !publicClient) {
+      setTxStatus('Connect your wallet first')
+      return
+    }
+
+    try {
+      // Step 2: Pay USDC to payToAddress via MetaMask (transfer)
+      setTxStatus(`${skillTx.description} — confirm USDC transfer in wallet...`)
+
+      const transferData = encodeFunctionData({
+        abi: TRANSFER_ABI,
+        functionName: 'transfer',
+        args: [skillTx.payToAddress as `0x${string}`, BigInt(skillTx.amountWei)],
+      })
+
+      const hash = await walletClient.sendTransaction({
+        to: USDC_ADDRESS as `0x${string}`,
+        data: transferData,
+        value: 0n,
+        chain: walletClient.chain,
+        account: address,
+      })
+
+      setTxStatus('Confirming USDC payment...')
+      await publicClient.waitForTransactionReceipt({ hash })
+      setTxStatus('Payment confirmed. Fetching data...')
+
+      // Step 3: Retry endpoint with X-Order-ID header immediately after receipt
+      const res = await fetch(skillTx.endpoint, {
+        headers: { 'X-Order-ID': skillTx.orderId },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const lines = Object.entries(data)
+          .map(([k, v]) => `  ${k}: ${v}`)
+          .join('\n')
+
+        setMessages(prev => [...prev, {
+          role: 'clawrence',
+          content: `Paid $0.10 USDC. Here's your data:\n\n${lines}\n\n— Clawrence`,
+        }])
+      } else {
+        const errBody = await res.text()
+        setMessages(prev => [...prev, {
+          role: 'clawrence',
+          content: `Payment confirmed on-chain. Server returned: ${errBody}\n\nTry asking again.\n\n— Clawrence`,
+        }])
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setTxStatus(`Skill payment failed: ${msg.slice(0, 80)}`)
+      setMessages(prev => [...prev, {
+        role: 'clawrence',
+        content: `Payment failed: ${msg.slice(0, 100)}\n\n— Clawrence`,
+      }])
+    } finally {
+      setTimeout(() => setTxStatus(null), 5000)
+    }
+  }, [walletClient, address, publicClient])
+
+  // @@SIGN — EIP-712 sign + send signature back to agent
   const executeSign = useCallback(async (signData: SignData, currentMessages: Message[]) => {
     if (!walletClient || !address) {
       setTxStatus('Connect your wallet first')
@@ -146,8 +239,6 @@ export function ClawrenceChat() {
       setTxStatus(`${signData.description} — sign in wallet...`)
 
       const { domain, types, primaryType, message } = signData.eip712
-
-      // Remove EIP712Domain from types if present (walletClient adds it)
       const sigTypes = { ...types }
       delete sigTypes['EIP712Domain']
 
@@ -166,12 +257,10 @@ export function ClawrenceChat() {
 
       setTxStatus('Signature received, sending to Clawrence...')
 
-      // Send signature back to agent as a new user message
       const sigMsg: Message = { role: 'user', content: `Signature: ${signature}` }
       const updatedMessages = [...currentMessages, sigMsg]
       setMessages(prev => [...prev, sigMsg, { role: 'clawrence', content: '' }])
 
-      // Stream the agent's response
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,10 +277,9 @@ export function ClawrenceChat() {
         const { done, value } = await reader.read()
         if (done) break
         accumulated += decoder.decode(value, { stream: true })
-        const snap = accumulated
         setMessages(prev => {
           const updated = [...prev]
-          updated[updated.length - 1] = { role: 'clawrence', content: snap }
+          updated[updated.length - 1] = { role: 'clawrence', content: accumulated }
           return updated
         })
       }
@@ -212,7 +300,6 @@ export function ClawrenceChat() {
     setInput('')
     setLoading(true)
 
-    // Add empty Clawrence message to stream into
     setMessages(prev => [...prev, { role: 'clawrence', content: '' }])
 
     try {
@@ -232,36 +319,26 @@ export function ClawrenceChat() {
         const { done, value } = await reader.read()
         if (done) break
         accumulated += decoder.decode(value, { stream: true })
-        const snap = accumulated
         setMessages(prev => {
           const updated = [...prev]
-          updated[updated.length - 1] = { role: 'clawrence', content: snap }
+          updated[updated.length - 1] = { role: 'clawrence', content: accumulated }
           return updated
         })
       }
 
-      // After streaming completes, check for @@TX and @@SIGN blocks in the full stream
-      const { clean: cleanTx, txBlocks } = extractTxBlocks(accumulated)
-      const { clean: cleanAll, signBlocks } = extractSignBlocks(cleanTx)
+      // Extract all action blocks
+      const { clean: c1, txBlocks } = extractTxBlocks(accumulated)
+      const { clean: c2, signBlocks } = extractSignBlocks(c1)
+      const { clean: c3, skillTxBlocks } = extractSkillTxBlocks(c2)
 
-      // Clean up displayed message — remove markers, [calling...] lines, and extra whitespace
-      const displayText = cleanAll
-        .replace(/\[calling \w+\.\.\.\]/g, '')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim()
-
+      const displayText = cleanDisplayText(c3)
       const finalMessages = [...nextMessages, { role: 'clawrence' as const, content: displayText }]
       setMessages(finalMessages)
 
-      // Execute transactions
-      for (const tx of txBlocks) {
-        await executeTx(tx)
-      }
-
-      // Execute sign requests
-      for (const sign of signBlocks) {
-        await executeSign(sign, finalMessages)
-      }
+      // Execute: skill payments → direct txs → sign requests
+      for (const skill of skillTxBlocks) await executeSkillTx(skill)
+      for (const tx of txBlocks) await executeTx(tx)
+      for (const sign of signBlocks) await executeSign(sign, finalMessages)
     } catch {
       setMessages(prev => {
         const updated = [...prev]
@@ -271,14 +348,6 @@ export function ClawrenceChat() {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Render message content, hiding any @@TX/@@SIGN blocks from display
-  function renderContent(content: string) {
-    return content
-      .replace(/@@TX[\s\S]*?@@TX/g, '')
-      .replace(/@@SIGN[\s\S]*?@@SIGN/g, '')
-      .trim()
   }
 
   return (
@@ -295,7 +364,7 @@ export function ClawrenceChat() {
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingRight: '0.25rem' }}>
         {messages.map((m, i) => {
-          const displayed = renderContent(m.content)
+          const displayed = cleanDisplayText(m.content)
           if (!displayed) return null
           const isClawrence = m.role === 'clawrence'
           return (
@@ -331,7 +400,6 @@ export function ClawrenceChat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Transaction status bar */}
       {txStatus && (
         <div style={{
           marginTop: '0.75rem',

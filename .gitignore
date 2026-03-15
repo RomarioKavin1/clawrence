@@ -19,3 +19,4 @@ docs
 skill-server/bun.lock
 agent/bun.lock
 test-requests.txt
+/reference

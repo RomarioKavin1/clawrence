@@ -26,18 +26,18 @@ router.get('/', async (req: Request, res: Response) => {
   const addr = address as `0x${string}`
 
   try {
-    const [score, ltv, streak, lastActivity, totalLoans] = await Promise.all([
+    const [score, ltv, streak, lastActivity, totalLoans, totalRepaid, hasHistory] = await Promise.all([
       publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getScore', args: [addr] }),
       publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getLTV', args: [addr] }),
       publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [addr] }),
       publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'lastActivityTimestamp', args: [addr] }),
       publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'totalLoans', args: [addr] }),
+      publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'totalRepaid', args: [addr] }),
+      publicClient.readContract({ address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'hasHistory', args: [addr] }),
     ])
 
     const nowSec = BigInt(Math.floor(Date.now() / 1000))
-    const inactiveDays = lastActivity > 0n
-      ? Number((nowSec - lastActivity) / 86400n)
-      : 0
+    const inactiveDays = lastActivity > 0n ? Number((nowSec - lastActivity) / 86400n) : 0
 
     res.json({
       address: addr,
@@ -46,6 +46,8 @@ router.get('/', async (req: Request, res: Response) => {
       ltv: `${ltv}%`,
       consecutiveRepayments: Number(streak),
       totalLoans: Number(totalLoans),
+      totalRepaid: Number(totalRepaid),
+      hasHistory: Boolean(hasHistory),
       inactiveDays,
       decayRisk: inactiveDays > 30 ? 'HIGH' : inactiveDays > 7 ? 'MEDIUM' : 'NONE',
     })

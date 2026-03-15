@@ -1,12 +1,9 @@
-import { formatUnits, parseEther, parseUnits, verifyTypedData, type Address } from 'viem'
+import { parseEther, verifyTypedData, type Address } from 'viem'
 import { publicClient, getWalletClient } from '../lib/client.js'
-import { VAULT_ABI, CREDIT_SCORE_ABI, ERC20_ABI } from '../lib/abis.js'
+import { VAULT_ABI } from '../lib/abis.js'
 
-const VAULT    = process.env.VAULT_ADDRESS        as Address
-const CS       = process.env.CREDIT_SCORE_ADDRESS as Address
-const USDC     = process.env.USDC_ADDRESS         as Address
-const PK       = process.env.PRIVATE_KEY          as `0x${string}`
-
+const VAULT    = process.env.VAULT_ADDRESS as Address
+const PK       = process.env.PRIVATE_KEY   as `0x${string}`
 // ── EIP-712 Withdraw Challenge ──────────────────────────────────────────────
 
 const EIP712_DOMAIN = {
@@ -37,7 +34,7 @@ const pendingWithdrawChallenges = new Map<string, WithdrawChallenge>()
 
 export function generateWithdrawChallenge(address: Address, amountBtc: string): WithdrawChallenge {
   const nonce = Date.now()
-  const expiresAt = nonce + 5 * 60 * 1000 // 5 minutes
+  const expiresAt = nonce + 5 * 60 * 1000
   const amountWei = parseEther(amountBtc)
 
   const challenge: WithdrawChallenge = {
@@ -66,7 +63,7 @@ export async function verifyWithdrawSignature(address: Address, signature: `0x${
     return false
   }
 
-  const valid = await verifyTypedData({
+  return verifyTypedData({
     address,
     domain: challenge.domain,
     types: challenge.types,
@@ -74,8 +71,6 @@ export async function verifyWithdrawSignature(address: Address, signature: `0x${
     message: challenge.message,
     signature,
   })
-
-  return valid
 }
 
 export function consumeWithdrawChallenge(address: Address): WithdrawChallenge | undefined {
@@ -83,45 +78,6 @@ export function consumeWithdrawChallenge(address: Address): WithdrawChallenge | 
   const c = pendingWithdrawChallenges.get(key)
   pendingWithdrawChallenges.delete(key)
   return c
-}
-
-// ── Read tools ────────────────────────────────────────────────────────────────
-
-export async function getPosition(address: Address) {
-  const [collateral, debt, hf, maxBorrow, collatUSD, score, ltv, streak, totalLoans] =
-    await Promise.all([
-      publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'collateral',            args: [address] }),
-      publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'debt',                  args: [address] }),
-      publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'getHealthFactor',        args: [address] }),
-      publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'getMaxBorrow',           args: [address] }),
-      publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'getCollateralValueUSD',  args: [address] }),
-      publicClient.readContract({ address: CS,    abi: CREDIT_SCORE_ABI, functionName: 'getScore',        args: [address] }),
-      publicClient.readContract({ address: CS,    abi: CREDIT_SCORE_ABI, functionName: 'getLTV',          args: [address] }),
-      publicClient.readContract({ address: CS,    abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [address] }),
-      publicClient.readContract({ address: CS,    abi: CREDIT_SCORE_ABI, functionName: 'totalLoans',      args: [address] }),
-    ])
-
-  const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-  const hfDisplay = hf === MAX_UINT256 ? 'No debt' : `${(Number(hf) / 100).toFixed(2)}x`
-  const status = hf === MAX_UINT256 ? 'HEALTHY' : hf < 100n ? 'LIQUIDATABLE' : hf < 120n ? 'WARNING' : 'HEALTHY'
-
-  const scoreTier = (s: bigint) =>
-    s >= 95n ? 'Elite' : s >= 85n ? 'Veteran' : s >= 70n ? 'Trusted' : s >= 50n ? 'Basic' : s >= 30n ? 'New' : 'Blocked'
-
-  return {
-    address,
-    creditScore:      Number(score),
-    scoreTier:        scoreTier(score as bigint),
-    ltvPercent:       Number(ltv),
-    collateralBTC:    formatUnits(collateral as bigint, 18),
-    collateralUSD:    `$${formatUnits(collatUSD as bigint, 6)}`,
-    debtUSDC:         formatUnits(debt as bigint, 6),
-    maxBorrowUSDC:    formatUnits(maxBorrow as bigint, 6),
-    healthFactor:     hfDisplay,
-    status,
-    repayStreak:      Number(streak),
-    totalLoans:       Number(totalLoans),
-  }
 }
 
 // ── Write tools (server-side execution) ──────────────────────────────────────
@@ -140,21 +96,4 @@ export async function withdrawBTC(amountEther: string) {
 export function agentAddress(): Address {
   const { account } = getWalletClient(PK)
   return account.address
-}
-
-// ── x402 Skill Server tools ───────────────────────────────────────────────────
-
-export async function fetchCreditScore(address: Address) {
-  const { payAndFetch } = await import('./x402.js')
-  return payAndFetch(`/credit-score?address=${address}`, agentAddress())
-}
-
-export async function fetchBorrowCapacity(address: Address) {
-  const { payAndFetch } = await import('./x402.js')
-  return payAndFetch(`/borrow-capacity?address=${address}`, agentAddress())
-}
-
-export async function fetchMarketRate() {
-  const { payAndFetch } = await import('./x402.js')
-  return payAndFetch('/market-rate', agentAddress())
 }
