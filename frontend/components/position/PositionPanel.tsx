@@ -10,14 +10,14 @@ export function PositionPanel() {
 
   const { data, isLoading } = useReadContracts({
     contracts: address ? [
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'collateral',            args: [address] },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'debt',                  args: [address] },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getHealthFactor',        args: [address] },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getMaxBorrow',           args: [address] },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getCollateralValueUSD',  args: [address] },
-      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getScore',              args: [address] },
-      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getLTV',                args: [address] },
-      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [address] },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'collateral',            args: [address], chainId: 48816 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'debt',                  args: [address], chainId: 48816 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getHealthFactor',        args: [address], chainId: 48816 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getMaxBorrow',           args: [address], chainId: 48816 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getCollateralValueUSD',  args: [address], chainId: 48816 },
+      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getScore',              args: [address], chainId: 48816 },
+      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getLTV',                args: [address], chainId: 48816 },
+      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [address], chainId: 48816 },
     ] : [],
     query: { refetchInterval: 15_000 },
   })
