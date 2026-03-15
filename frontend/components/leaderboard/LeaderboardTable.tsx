@@ -19,7 +19,7 @@ export function LeaderboardTable({ entries, loading }: Props) {
   if (loading) {
     return (
       <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260' }}>Loading leaderboard…</p>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: 'var(--text-muted)' }}>Loading leaderboard…</p>
       </div>
     )
   }
@@ -27,10 +27,10 @@ export function LeaderboardTable({ entries, loading }: Props) {
   if (entries.length === 0) {
     return (
       <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#111', marginBottom: '0.35rem' }}>
+        <p style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
           No depositors yet.
         </p>
-        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#6B7260' }}>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           Be the first to deposit collateral and build credit.
         </p>
       </div>
@@ -44,13 +44,13 @@ export function LeaderboardTable({ entries, loading }: Props) {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {headers.map(h => (
                 <th key={h} style={{
                   padding: '0.875rem 1rem', textAlign: 'left',
                   fontFamily: 'Inter, sans-serif', fontWeight: 600,
                   fontSize: '0.68rem', letterSpacing: '0.07em',
-                  color: '#6B7260', textTransform: 'uppercase',
+                  color: 'var(--text-muted)', textTransform: 'uppercase',
                 }}>
                   {h}
                 </th>
@@ -61,29 +61,29 @@ export function LeaderboardTable({ entries, loading }: Props) {
             {entries.map((e, idx) => (
               <tr
                 key={e.address}
-                style={{ borderBottom: idx < entries.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}
-                onMouseEnter={ev => { (ev.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.02)' }}
+                style={{ borderBottom: idx < entries.length - 1 ? '1px solid var(--border)' : 'none' }}
+                onMouseEnter={ev => { (ev.currentTarget as HTMLElement).style.background = 'var(--card-2)' }}
                 onMouseLeave={ev => { (ev.currentTarget as HTMLElement).style.background = 'transparent' }}
               >
-                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: '#6B7260' }}>
+                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                   {e.rank}
                 </td>
-                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#111', fontWeight: 500 }}>
+                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text)', fontWeight: 500 }}>
                   {e.address.slice(0, 6)}…{e.address.slice(-4)}
                 </td>
-                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1rem', color: '#111' }}>
+                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>
                   {e.score}
                 </td>
                 <td style={{ padding: '0.875rem 1rem' }}>
                   <ScoreBadge score={e.score} />
                 </td>
-                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#6B7260' }}>
+                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   {e.totalLoans}
                 </td>
-                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#6B7260' }}>
+                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   {e.totalRepaid}
                 </td>
-                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: e.streak > 0 ? '#111' : '#ccc' }}>
+                <td style={{ padding: '0.875rem 1rem', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: e.streak > 0 ? 'var(--text)' : 'var(--border)' }}>
                   {e.streak > 0 ? `×${e.streak}` : '—'}
                 </td>
               </tr>

@@ -2,12 +2,12 @@ interface Props { score: number }
 
 export function ScoreBadge({ score }: Props) {
   const { label, bg, color } = (() => {
-    if (score >= 95) return { label: 'Elite',   bg: '#CAFF00', color: '#111' }
-    if (score >= 85) return { label: 'Veteran', bg: '#111',    color: '#fff' }
-    if (score >= 70) return { label: 'Trusted', bg: 'rgba(0,0,0,0.09)', color: '#333' }
-    if (score >= 50) return { label: 'Basic',   bg: 'rgba(0,0,0,0.06)', color: '#555' }
-    if (score >= 30) return { label: 'New',     bg: 'rgba(0,0,0,0.04)', color: '#777' }
-    return              { label: 'Blocked', bg: '#fee2e2', color: '#b91c1c' }
+    if (score >= 95) return { label: 'Elite',   bg: '#CAFF00',                color: '#111111' }
+    if (score >= 85) return { label: 'Veteran', bg: 'var(--text)',             color: 'var(--bg)' }
+    if (score >= 70) return { label: 'Trusted', bg: 'rgba(128,128,128,0.15)', color: 'var(--text)' }
+    if (score >= 50) return { label: 'Basic',   bg: 'rgba(128,128,128,0.1)',  color: 'var(--text-muted)' }
+    if (score >= 30) return { label: 'New',     bg: 'rgba(128,128,128,0.07)', color: 'var(--text-muted)' }
+    return              { label: 'Blocked', bg: 'rgba(239,68,68,0.15)',    color: '#ef4444' }
   })()
 
   return (

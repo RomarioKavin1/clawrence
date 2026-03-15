@@ -8,11 +8,11 @@ export default function LandingPage() {
       <div style={{ marginBottom: '3rem', maxWidth: 680 }}>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: '#CAFF00', borderRadius: 9999,
+          background: 'var(--accent)', borderRadius: 9999,
           padding: '0.3rem 0.75rem', marginBottom: '1.5rem',
         }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#111', display: 'inline-block' }} />
-          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.06em', color: '#111' }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-fg)', display: 'inline-block' }} />
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.06em', color: 'var(--accent-fg)' }}>
             LIVE ON GOAT TESTNET3
           </span>
         </div>
@@ -23,7 +23,7 @@ export default function LandingPage() {
           fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
           lineHeight: 1.05,
           letterSpacing: '-0.03em',
-          color: '#111',
+          color: 'var(--text)',
           marginBottom: '1rem',
         }}>
           Credit infrastructure<br />for autonomous agents.
@@ -32,7 +32,7 @@ export default function LandingPage() {
         <p style={{
           fontFamily: 'Inter, sans-serif',
           fontSize: '1.05rem',
-          color: '#6B7260',
+          color: 'var(--text-muted)',
           lineHeight: 1.65,
           maxWidth: 480,
           marginBottom: '2rem',
@@ -46,7 +46,7 @@ export default function LandingPage() {
           </Link>
           <Link href="/leaderboard" style={{
             fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '0.875rem',
-            color: '#6B7260', textDecoration: 'none', padding: '0.7rem 0',
+            color: 'var(--text-muted)', textDecoration: 'none', padding: '0.7rem 0',
           }}>
             View Leaderboard →
           </Link>
@@ -60,14 +60,14 @@ export default function LandingPage() {
         <div className="card" style={{ gridColumn: 'span 7', padding: '2rem', position: 'relative' }}>
           <p className="stat-label" style={{ marginBottom: '0.5rem' }}>Credit Score Engine</p>
           <h2 style={{ fontSize: '1.35rem', marginBottom: '0.75rem' }}>On-chain reputation that compounds.</h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260', lineHeight: 1.6, maxWidth: 360, marginBottom: '1.5rem' }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 360, marginBottom: '1.5rem' }}>
             Scores from 0–100 based on utilization weighting, loan duration, and repayment streaks. Decay-protected against gaming.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             {[
               { label: 'Elite 95+', bg: '#CAFF00', color: '#111' },
-              { label: 'Veteran 85+', bg: '#111', color: '#fff' },
-              { label: 'Trusted 70+', bg: 'rgba(0,0,0,0.07)', color: '#444' },
+              { label: 'Veteran 85+', bg: 'var(--text)', color: 'var(--bg)' },
+              { label: 'Trusted 70+', bg: 'rgba(128,128,128,0.15)', color: 'var(--text)' },
             ].map(t => (
               <span key={t.label} style={{
                 background: t.bg, color: t.color,
@@ -81,9 +81,9 @@ export default function LandingPage() {
         </div>
 
         {/* LTV tiers — dark card */}
-        <div className="card" style={{ gridColumn: 'span 5', padding: '2rem', background: '#111' }}>
-          <p className="stat-label" style={{ color: '#6B7260', marginBottom: '0.5rem' }}>LTV Tiers</p>
-          <h2 style={{ fontSize: '1.2rem', color: '#fff', marginBottom: '1.25rem' }}>Better score, more capital.</h2>
+        <div className="card" style={{ gridColumn: 'span 5', padding: '2rem', background: 'var(--bg-2)' }}>
+          <p className="stat-label" style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>LTV Tiers</p>
+          <h2 style={{ fontSize: '1.2rem', color: 'var(--text)', marginBottom: '1.25rem' }}>Better score, more capital.</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {[
               { range: 'Score 95–100', ltv: '100%', accent: true },
@@ -97,10 +97,10 @@ export default function LandingPage() {
                 padding: '0.45rem 0.75rem', borderRadius: '0.5rem',
                 background: row.accent ? '#CAFF00' : 'rgba(255,255,255,0.06)',
               }}>
-                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: row.accent ? '#111' : '#888', fontWeight: 500 }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: row.accent ? '#111' : 'var(--text-muted)', fontWeight: 500 }}>
                   {row.range}
                 </span>
-                <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: row.accent ? '#111' : '#fff' }}>
+                <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: row.accent ? '#111' : 'var(--text)' }}>
                   {row.ltv}
                 </span>
               </div>
@@ -112,16 +112,16 @@ export default function LandingPage() {
         <div className="card" style={{ gridColumn: 'span 4', padding: '2rem' }}>
           <div style={{
             width: 40, height: 40, borderRadius: '0.625rem',
-            background: '#CAFF00', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: '1rem',
           }}>
-            <svg width="20" height="20" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24">
+            <svg width="20" height="20" fill="none" stroke="var(--accent-fg)" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
           </div>
           <p className="stat-label" style={{ marginBottom: '0.4rem' }}>Autonomous</p>
           <h3 style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>No human in the loop.</h3>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#6B7260', lineHeight: 1.55 }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
             Clawrence evaluates and executes borrows autonomously. Agents access capital without permission gates.
           </p>
         </div>
@@ -139,7 +139,7 @@ export default function LandingPage() {
             </svg>
           </div>
           <p className="stat-label" style={{ color: '#5a6040', marginBottom: '0.4rem' }}>x402 Payments</p>
-          <h3 style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>Close the loop.</h3>
+          <h3 style={{ fontSize: '1.05rem', marginBottom: '0.5rem', color: '#111' }}>Close the loop.</h3>
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#3a3f28', lineHeight: 1.55 }}>
             Borrow USDC from Clawrence to pay Clawrence&apos;s own x402 endpoints. A self-contained autonomous economy.
           </p>
@@ -149,10 +149,10 @@ export default function LandingPage() {
         <div className="card" style={{ gridColumn: 'span 4', padding: '2rem' }}>
           <div style={{
             width: 40, height: 40, borderRadius: '0.625rem',
-            background: 'rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--card-2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: '1rem',
           }}>
-            <svg width="20" height="20" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24">
+            <svg width="20" height="20" fill="none" stroke="var(--text)" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" />
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -160,7 +160,7 @@ export default function LandingPage() {
           </div>
           <p className="stat-label" style={{ marginBottom: '0.4rem' }}>ERC-8004 Identity</p>
           <h3 style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>Composable credit.</h3>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: '#6B7260', lineHeight: 1.55 }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
             Every score is written to the GOAT agent registry. Any protocol can read credit history — Clawrence is infrastructure.
           </p>
         </div>
@@ -178,13 +178,13 @@ export default function LandingPage() {
               <div key={s.n}>
                 <div style={{
                   fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800,
-                  fontSize: '2rem', color: '#CAFF00',
-                  WebkitTextStroke: '1.5px #111', marginBottom: '0.5rem',
+                  fontSize: '2rem', color: 'var(--accent)',
+                  WebkitTextStroke: '1.5px var(--text-muted)', marginBottom: '0.5rem',
                 }}>
                   {s.n}
                 </div>
                 <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>{s.title}</h3>
-                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.825rem', color: '#6B7260', lineHeight: 1.5 }}>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                   {s.body}
                 </p>
               </div>
@@ -195,10 +195,10 @@ export default function LandingPage() {
       </div>
 
       {/* CTA */}
-      <div className="card" style={{ marginTop: '0.875rem', padding: '2.5rem', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem', flexWrap: 'wrap' }}>
+      <div className="card" style={{ marginTop: '0.875rem', padding: '2.5rem', background: 'var(--bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem', flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.4rem' }}>Ready to borrow?</h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: '#888' }}>
+          <h2 style={{ color: 'var(--text)', fontSize: '1.5rem', marginBottom: '0.4rem' }}>Ready to borrow?</h2>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
             Connect on GOAT Testnet3. No sign-up. Just on-chain reputation.
           </p>
         </div>

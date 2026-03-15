@@ -355,8 +355,8 @@ export function ClawrenceChat() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1.25rem' }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#CAFF00', border: '1.5px solid rgba(0,0,0,0.2)' }} />
-        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: '#6B7260', textTransform: 'uppercase' }}>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', border: '1.5px solid rgba(128,128,128,0.2)' }} />
+        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
           Clawrence — Credit Agent
         </span>
       </div>
@@ -372,7 +372,7 @@ export function ClawrenceChat() {
               <span style={{
                 fontFamily: 'Inter, sans-serif', fontSize: '0.68rem', fontWeight: 600,
                 letterSpacing: '0.06em', textTransform: 'uppercase',
-                color: isClawrence ? '#111' : '#6B7260',
+                color: isClawrence ? 'var(--text)' : 'var(--text-muted)',
               }}>
                 {isClawrence ? 'Clawrence' : 'You'}
               </span>
@@ -380,10 +380,10 @@ export function ClawrenceChat() {
                 fontFamily: isClawrence ? 'Space Grotesk, sans-serif' : 'Inter, sans-serif',
                 fontSize: '0.875rem',
                 fontWeight: isClawrence ? 500 : 400,
-                color: isClawrence ? '#111' : '#6B7260',
+                color: isClawrence ? 'var(--text)' : 'var(--text-muted)',
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
-                background: isClawrence ? 'rgba(0,0,0,0.03)' : 'transparent',
+                background: isClawrence ? 'var(--card-2)' : 'transparent',
                 borderRadius: '0.625rem',
                 padding: isClawrence ? '0.625rem 0.75rem' : '0',
               }}>
@@ -393,7 +393,7 @@ export function ClawrenceChat() {
           )
         })}
         {loading && messages[messages.length - 1]?.content === '' && (
-          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: '#6B7260' }}>
+          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             thinking…
           </div>
         )}
@@ -404,12 +404,12 @@ export function ClawrenceChat() {
         <div style={{
           marginTop: '0.75rem',
           padding: '0.5rem 0.875rem',
-          background: '#CAFF00',
+          background: 'rgba(202,255,0,0.1)',
           borderRadius: '0.5rem',
           fontFamily: 'Inter, sans-serif',
           fontSize: '0.75rem',
           fontWeight: 600,
-          color: '#111',
+          color: 'var(--accent)',
         }}>
           {txStatus}
         </div>

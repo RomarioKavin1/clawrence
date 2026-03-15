@@ -25,12 +25,12 @@ export function PositionPanel() {
   if (!isConnected) {
     return (
       <div className="card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 420 }}>
-        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#6B7260" strokeWidth="1.5">
+        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--card-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="var(--text-muted)" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
           </svg>
         </div>
-        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260' }}>Connect wallet to view position</p>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: 'var(--text-muted)' }}>Connect wallet to view position</p>
       </div>
     )
   }
@@ -38,10 +38,10 @@ export function PositionPanel() {
   if (isLoading || !data) {
     return (
       <div className="card" style={{ padding: '1.5rem', minHeight: 420 }}>
-        <div style={{ height: 12, width: 100, background: 'rgba(0,0,0,0.06)', borderRadius: 6, marginBottom: '1.5rem' }} />
+        <div style={{ height: 12, width: 100, background: 'var(--card-2)', borderRadius: 6, marginBottom: '1.5rem' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           {[1,2,3,4,5,6,7,8].map(i => (
-            <div key={i} style={{ height: 80, background: 'rgba(0,0,0,0.04)', borderRadius: '0.75rem' }} />
+            <div key={i} style={{ height: 80, background: 'var(--card-2)', borderRadius: '0.75rem' }} />
           ))}
         </div>
       </div>
@@ -81,8 +81,8 @@ export function PositionPanel() {
   return (
     <div className="card" style={{ padding: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1.25rem' }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#CAFF00', border: '1.5px solid rgba(0,0,0,0.2)' }} />
-        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: '#6B7260', textTransform: 'uppercase' }}>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', border: '1.5px solid rgba(128,128,128,0.2)' }} />
+        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
           Live Position
         </span>
       </div>
@@ -107,9 +107,9 @@ function StatBox({ label, value, valueColor, children }: {
   label: string; value: string; valueColor?: string; children?: React.ReactNode
 }) {
   return (
-    <div style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
+    <div style={{ background: 'var(--card-2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
       <div className="stat-label" style={{ marginBottom: '0.3rem' }}>{label}</div>
-      <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: valueColor || '#111', lineHeight: 1.2 }}>
+      <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: valueColor || 'var(--text)', lineHeight: 1.2 }}>
         {value}
       </div>
       {children && <div style={{ marginTop: '0.35rem' }}>{children}</div>}

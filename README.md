@@ -34,6 +34,18 @@ Agents cannot scale without capital. They cannot get capital without human inter
 
 ---
 
+## Deployed Contracts — GOAT Testnet3
+
+| Contract | Address | Explorer |
+|---|---|---|
+| ClawrenceVault | `0x9cBF61D82adf61417cD2e513629fD8aABAD85B32` | [View ↗](https://explorer.testnet3.goat.network/address/0x9cBF61D82adf61417cD2e513629fD8aABAD85B32) |
+| CreditScore | `0x65617c310059961f68916Cb592Aa9cec3B404863` | [View ↗](https://explorer.testnet3.goat.network/address/0x65617c310059961f68916Cb592Aa9cec3B404863) |
+| USDC | `0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1` | [View ↗](https://explorer.testnet3.goat.network/address/0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1) |
+| DIA Oracle | `0xef094fff94a7954ba3e5ed81dbafe7350e7e9720` | [View ↗](https://explorer.testnet3.goat.network/address/0xef094fff94a7954ba3e5ed81dbafe7350e7e9720) |
+| ERC-8004 Registry | `0x556089008Fc0a60cD09390Eca93477ca254A5522` | [View ↗](https://explorer.testnet3.goat.network/address/0x556089008Fc0a60cD09390Eca93477ca254A5522) |
+
+---
+
 ## Network
 
 | Detail | Value |
@@ -280,8 +292,11 @@ npm run dev
 ```
 PRIVATE_KEY=
 GOAT_RPC=https://rpc.testnet3.goat.network
-DIA_ORACLE_ADDRESS=
-ERC8004_REGISTRY=
+DIA_ORACLE_ADDRESS=0xef094fff94a7954ba3e5ed81dbafe7350e7e9720
+ERC8004_REGISTRY=0x556089008Fc0a60cD09390Eca93477ca254A5522
+VAULT_ADDRESS=0x9cBF61D82adf61417cD2e513629fD8aABAD85B32
+CREDIT_SCORE_ADDRESS=0x65617c310059961f68916Cb592Aa9cec3B404863
+USDC_ADDRESS=0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1
 ```
 
 ### Skill Server
@@ -290,17 +305,18 @@ GOATX402_API_URL=https://x402-api-lx58aabp0r.testnet3.goat.network
 GOATX402_MERCHANT_ID=clawrence
 GOATX402_API_KEY=
 GOATX402_API_SECRET=
-VAULT_ADDRESS=
-CREDIT_SCORE_ADDRESS=
+VAULT_ADDRESS=0x9cBF61D82adf61417cD2e513629fD8aABAD85B32
+CREDIT_SCORE_ADDRESS=0x65617c310059961f68916Cb592Aa9cec3B404863
+USDC_ADDRESS=0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1
 GOAT_RPC=https://rpc.testnet3.goat.network
 ```
 
 ### Frontend
 ```
-NEXT_PUBLIC_VAULT_ADDRESS=
-NEXT_PUBLIC_CREDIT_SCORE_ADDRESS=
+NEXT_PUBLIC_VAULT_ADDRESS=0x9cBF61D82adf61417cD2e513629fD8aABAD85B32
+NEXT_PUBLIC_CREDIT_SCORE_ADDRESS=0x65617c310059961f68916Cb592Aa9cec3B404863
 NEXT_PUBLIC_CHAIN_ID=48816
-NEXT_PUBLIC_SKILL_SERVER_URL=
+NEXT_PUBLIC_SKILL_SERVER_URL=http://localhost:3000
 ```
 
 ---

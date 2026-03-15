@@ -47,7 +47,7 @@ export function VaultActions() {
     <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.25rem', padding: '0.25rem', background: 'rgba(0,0,0,0.06)', borderRadius: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: '0.25rem', padding: '0.25rem', background: 'var(--card-2)', borderRadius: '0.75rem' }}>
         {tabs.map(t => (
           <button
             key={t}
@@ -57,8 +57,8 @@ export function VaultActions() {
               fontFamily: 'Inter, sans-serif', fontWeight: 600,
               fontSize: '0.8rem', textTransform: 'capitalize',
               border: 'none', cursor: 'pointer', borderRadius: '0.5rem',
-              background: action === t ? '#fff' : 'transparent',
-              color: action === t ? '#111' : '#6B7260',
+              background: action === t ? 'var(--bg-2)' : 'transparent',
+              color: action === t ? 'var(--text)' : 'var(--text-muted)',
               transition: 'all 0.15s',
             }}
           >
@@ -69,7 +69,7 @@ export function VaultActions() {
 
       {/* Amount */}
       <div>
-        <label style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.68rem', fontWeight: 600, color: '#6B7260', display: 'block', marginBottom: '0.4rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+        <label style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
           Amount ({action === 'deposit' || action === 'withdraw' ? 'BTC' : 'USDC'})
         </label>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -86,7 +86,7 @@ export function VaultActions() {
               onClick={() => setAmount((Number(maxBorrow) / 1e6).toFixed(2))}
               style={{
                 fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.75rem',
-                color: '#111', background: '#CAFF00', border: 'none',
+                color: 'var(--accent-fg)', background: 'var(--accent)', border: 'none',
                 borderRadius: '0.5rem', padding: '0 0.875rem', cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
@@ -95,7 +95,7 @@ export function VaultActions() {
           )}
         </div>
         {action === 'borrow' && maxBorrow !== undefined && (
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.75rem', color: '#6B7260', marginTop: '0.35rem' }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
             Max: {(Number(maxBorrow) / 1e6).toFixed(2)} USDC
           </p>
         )}

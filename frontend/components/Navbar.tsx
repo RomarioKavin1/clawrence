@@ -15,7 +15,7 @@ export function Navbar() {
   const pathname = usePathname()
 
   return (
-    <nav style={{ backgroundColor: '#B8BFB0', position: 'sticky', top: 0, zIndex: 50, padding: '0.875rem 1.5rem' }}>
+    <nav style={{ backgroundColor: 'var(--bg)', position: 'sticky', top: 0, zIndex: 50, padding: '0.875rem 1.5rem' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
         {/* Left: logo + links */}
@@ -23,11 +23,11 @@ export function Navbar() {
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
             <div style={{
               width: 32, height: 32, borderRadius: '0.5rem',
-              background: '#CAFF00', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1rem', color: '#111', lineHeight: 1 }}>C</span>
+              <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'var(--accent-fg)', lineHeight: 1 }}>C</span>
             </div>
-            <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#111', letterSpacing: '-0.02em' }}>
+            <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>
               CLAWRENCE
             </span>
           </Link>
@@ -46,8 +46,8 @@ export function Navbar() {
                     fontSize: '0.875rem',
                     padding: '0.4rem 0.875rem',
                     borderRadius: 9999,
-                    background: active ? '#111' : 'transparent',
-                    color: active ? '#fff' : '#6B7260',
+                    background: active ? 'var(--text)' : 'transparent',
+                    color: active ? 'var(--bg)' : 'var(--text-muted)',
                     transition: 'all 0.15s',
                   }}
                 >

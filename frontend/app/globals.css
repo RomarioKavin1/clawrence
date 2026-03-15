@@ -1,11 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
+:root {
+  --bg: #111111;
+  --bg-2: #1a1a1a;
+  --card: #1e1e1e;
+  --card-2: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text: #f0f0f0;
+  --text-muted: #888888;
+  --accent: #CAFF00;
+  --accent-fg: #111111;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #B8BFB0;
+    --bg-2: #adb5a6;
+    --card: #FFFFFF;
+    --card-2: rgba(0,0,0,0.03);
+    --border: rgba(0,0,0,0.08);
+    --text: #111111;
+    --text-muted: #6B7260;
+    --accent: #CAFF00;
+    --accent-fg: #111111;
+  }
+}
+
 * { box-sizing: border-box; }
 
 body {
-  background-color: #B8BFB0;
-  color: #111111;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
@@ -14,13 +40,13 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
-  color: #111111;
+  color: var(--text);
 }
 
 .card {
-  background: #FFFFFF;
+  background: var(--card);
   border-radius: 1.25rem;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
 }
 
 .btn-primary {
@@ -28,8 +54,8 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: #111111;
-  color: #fff;
+  background: var(--text);
+  color: var(--bg);
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
@@ -49,8 +75,8 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: #CAFF00;
-  color: #111111;
+  background: var(--accent);
+  color: var(--accent-fg);
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
   font-size: 0.875rem;
@@ -67,26 +93,32 @@ h1, h2, h3, h4, h5, h6 {
 
 .input-field {
   width: 100%;
-  background: #f5f6f4;
-  border: 1.5px solid rgba(0,0,0,0.1);
+  background: var(--card-2);
+  border: 1.5px solid var(--border);
   border-radius: 0.625rem;
   padding: 0.75rem 1rem;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1rem;
   font-weight: 600;
-  color: #111111;
+  color: var(--text);
   outline: none;
   transition: border-color 0.15s;
 }
-.input-field:focus { border-color: #111111; }
-.input-field::placeholder { color: #aab0a4; font-weight: 400; }
+.input-field:focus { border-color: var(--accent); }
+.input-field::placeholder { color: var(--text-muted); font-weight: 400; }
 
-/* backward compat aliases */
-.glass-panel { background: #FFFFFF; border-radius: 1.25rem; border: 1px solid rgba(0,0,0,0.08); }
-.btn-black { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: #111111; color: #fff; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.875rem; padding: 0.7rem 1.5rem; border-radius: 9999px; border: none; cursor: pointer; text-decoration: none; transition: opacity 0.15s; }
+.stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+}
+
+/* backward compat */
+.glass-panel { background: var(--card); border-radius: 1.25rem; border: 1px solid var(--border); }
+.btn-black { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--text); color: var(--bg); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.875rem; padding: 0.7rem 1.5rem; border-radius: 9999px; border: none; cursor: pointer; text-decoration: none; transition: opacity 0.15s; }
 .btn-black:hover { opacity: 0.8; }
-.btn-black:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-lime { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: #CAFF00; color: #111111; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.875rem; padding: 0.7rem 1.5rem; border-radius: 9999px; border: none; cursor: pointer; text-decoration: none; transition: opacity 0.15s; }
+.btn-lime { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--accent); color: var(--accent-fg); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.875rem; padding: 0.7rem 1.5rem; border-radius: 9999px; border: none; cursor: pointer; text-decoration: none; transition: opacity 0.15s; }
 .btn-lime:hover { opacity: 0.85; }
-.stat-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #6B7260; font-family: 'Inter', sans-serif; }
-.stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #111111; line-height: 1.1; }

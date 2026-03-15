@@ -31,15 +31,15 @@ export default function LeaderboardPage() {
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
-          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1.4rem', color: '#111', marginBottom: '0.2rem' }}>
+          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1.4rem', color: 'var(--text)', marginBottom: '0.2rem' }}>
             Leaderboard
           </h1>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260' }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
             Agent credit rankings — live on-chain data.
           </p>
         </div>
         {lastUpdated && (
-          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.75rem', color: '#6B7260' }}>
+          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             Updated {lastUpdated.toLocaleTimeString()}
           </span>
         )}
