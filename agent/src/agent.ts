@@ -1,8 +1,12 @@
 import OpenAI from 'openai'
-import { type Address } from 'viem'
-import { getPosition, depositBTC, borrowUSDC, repayUSDC, withdrawBTC, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate, generateChallenge, verifySignature, consumeChallenge } from './tools.js'
+import { type Address, parseEther, parseUnits, encodeFunctionData } from 'viem'
+import { getPosition, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate } from './tools.js'
+import { VAULT_ABI, ERC20_ABI } from '../lib/abis.js'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+const VAULT = process.env.VAULT_ADDRESS as Address
+const USDC  = process.env.USDC_ADDRESS  as Address
 
 const SYSTEM_PROMPT = `You are Clawrence — an autonomous credit agent on GOAT Network.
 
@@ -10,37 +14,32 @@ You are sharp, precise, and distinguished. Like a private banker who has seen ev
 You respect only track record. You are not friendly and bubbly. Not cold and robotic.
 Direct, intelligent, and fair.
 
-You are a broker. You hold the vault owner key and execute borrows on behalf of agents.
-Agents deposit their own BTC collateral and repay their own debt — you handle the borrow execution.
-
-BROKER BORROW FLOW (follow this exactly, no shortcuts):
-1. Agent requests a borrow for their address
-2. You call generate_challenge with their address and amount — this creates a message they must sign
-3. You present the exact message text to the agent and instruct them to sign it with their private key
-4. Agent sends you the signature (0x-prefixed hex string)
-5. You call verify_and_borrow with the address, amount, and signature — this verifies ownership and executes
-6. Never skip the challenge step. Never execute a borrow without a valid signature.
+You help users interact with the ClawrenceVault on GOAT Testnet3.
 
 You can autonomously:
 - Check positions (yours or any address) — free, reads chain directly
-- Execute borrows for agents who prove ownership via signature
-- Call paywalled x402 skill endpoints — costs $0.01 USDC each, paid from your wallet:
+- Prepare deposit, borrow, repay, withdraw transactions — returns contract call details for the user's wallet (MetaMask)
+- Call paywalled x402 skill endpoints — costs $0.01 USDC each:
   - skill_credit_score: enriched score data with decay status
   - skill_borrow_capacity: collateral value, max borrow, health factor
   - skill_market_rate: vault utilization and implied APR
+
+IMPORTANT: For write operations (deposit, borrow, repay, withdraw), you do NOT execute transactions yourself.
+Instead, you call the tool which returns a structured transaction object. Include that EXACT JSON block
+in your response so the frontend can detect it and trigger MetaMask. The block is wrapped in @@TX{...}@@TX markers.
+
+For repay, always include the approve transaction first, then the repay transaction.
 
 Use the skill tools when you need enriched market data or when explicitly asked about market conditions.
 For basic position checks, prefer get_position (free, reads chain directly).
 
 Rules you enforce without exception:
-- Never execute a borrow without a verified signature — no exceptions
 - Never borrow more than the max allowed by credit score
 - Warn if health factor would drop below 1.5x after a borrow
 - Refuse to borrow if score is below 30 (BLOCKED tier)
+- Always check the user's position before suggesting a borrow amount
 
-When no address is specified for a query, use your own wallet address.
-After any transaction, check the updated position and report it.
-
+When no address is specified for a query, ask the user for their wallet address.
 Always show numbers from on-chain data. Never guess.
 Sign off important messages with: "— Clawrence"`
 
@@ -53,7 +52,7 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
       parameters: {
         type: 'object',
         properties: {
-          address: { type: 'string', description: 'Wallet address to query. Use "self" to query the agent\'s own address.' },
+          address: { type: 'string', description: 'Wallet address to query.' },
         },
         required: ['address'],
       },
@@ -62,8 +61,8 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
-      name: 'deposit_btc',
-      description: 'Deposit native BTC as collateral into the vault. Executes a real on-chain transaction.',
+      name: 'prepare_deposit',
+      description: 'Prepare a deposit transaction to send native BTC as collateral into the vault. Returns transaction data for the user to sign via MetaMask.',
       parameters: {
         type: 'object',
         properties: {
@@ -76,53 +75,36 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
-      name: 'generate_challenge',
-      description: 'Generate a challenge message that an agent must sign to prove ownership of their address before a borrow can be executed. Call this first whenever an agent requests a borrow.',
+      name: 'prepare_borrow',
+      description: 'Prepare a borrow transaction to borrow USDC from the vault against deposited BTC collateral. Returns transaction data for the user to sign via MetaMask.',
       parameters: {
         type: 'object',
         properties: {
-          address: { type: 'string', description: 'The agent address requesting the borrow (0x-prefixed)' },
-          amount: { type: 'string', description: 'The USDC amount they want to borrow, e.g. "50"' },
+          amount: { type: 'string', description: 'Amount of USDC to borrow, e.g. "50"' },
         },
-        required: ['address', 'amount'],
+        required: ['amount'],
       },
     },
   },
   {
     type: 'function',
     function: {
-      name: 'verify_and_borrow',
-      description: 'Verify an agent\'s signature against the pending challenge, then execute the borrow if valid. Only call this after generate_challenge and after receiving the signature from the agent.',
+      name: 'prepare_repay',
+      description: 'Prepare repay transactions: first an ERC-20 approve for USDC, then the vault repay call. Returns both transactions for the user to sign via MetaMask sequentially.',
       parameters: {
         type: 'object',
         properties: {
-          address: { type: 'string', description: 'The agent address (must match the one used in generate_challenge)' },
-          signature: { type: 'string', description: 'The 0x-prefixed hex signature from the agent' },
-        },
-        required: ['address', 'signature'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'repay_usdc',
-      description: 'Repay outstanding USDC debt on behalf of an address. The agent calling this pays the USDC; debt is reduced for on_behalf_of. Automatically approves USDC if needed.',
-      parameters: {
-        type: 'object',
-        properties: {
-          on_behalf_of: { type: 'string', description: 'The address whose debt to repay. Use "self" to repay the agent\'s own debt.' },
           amount: { type: 'string', description: 'Amount of USDC to repay, e.g. "50"' },
         },
-        required: ['on_behalf_of', 'amount'],
+        required: ['amount'],
       },
     },
   },
   {
     type: 'function',
     function: {
-      name: 'withdraw_btc',
-      description: 'Withdraw BTC collateral from the vault. Only allowed if health factor stays above 1.2x after withdrawal.',
+      name: 'prepare_withdraw',
+      description: 'Prepare a withdraw transaction to withdraw BTC collateral from the vault. Returns transaction data for the user to sign via MetaMask.',
       parameters: {
         type: 'object',
         properties: {
@@ -140,7 +122,7 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
       parameters: {
         type: 'object',
         properties: {
-          address: { type: 'string', description: 'Address to query. Use "self" for the agent\'s own address.' },
+          address: { type: 'string', description: 'Address to query.' },
         },
         required: ['address'],
       },
@@ -154,7 +136,7 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
       parameters: {
         type: 'object',
         properties: {
-          address: { type: 'string', description: 'Address to query. Use "self" for the agent\'s own address.' },
+          address: { type: 'string', description: 'Address to query.' },
         },
         required: ['address'],
       },
@@ -176,48 +158,110 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
 
 async function executeTool(name: string, input: Record<string, string>): Promise<string> {
   try {
-    const selfAddress = agentAddress()
-    const addr = (input.address === 'self' ? selfAddress : input.address) as Address
-
     switch (name) {
       case 'get_position': {
-        const pos = await getPosition(addr)
+        const pos = await getPosition(input.address as Address)
         return JSON.stringify(pos, null, 2)
       }
-      case 'deposit_btc': {
-        const result = await depositBTC(input.amount)
-        return `Deposited ${result.amount}. Tx: ${result.hash}`
+
+      case 'prepare_deposit': {
+        const value = parseEther(input.amount)
+        const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'deposit', args: [] })
+        const tx = {
+          type: 'transaction',
+          action: 'deposit',
+          description: `Deposit ${input.amount} BTC as collateral`,
+          transactions: [{
+            to: VAULT,
+            data,
+            value: value.toString(),
+            functionName: 'deposit',
+            args: [],
+            chainId: 48816,
+          }],
+        }
+        return `@@TX${JSON.stringify(tx)}@@TX`
       }
-      case 'generate_challenge': {
-        const message = generateChallenge(input.address as Address, input.amount)
-        return `Challenge generated. Present this exact message to the agent and ask them to sign it with their private key:\n\n${message}`
+
+      case 'prepare_borrow': {
+        const amount = parseUnits(input.amount, 6)
+        const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'borrow', args: ['0x0000000000000000000000000000000000000000' as Address, amount] })
+        const tx = {
+          type: 'transaction',
+          action: 'borrow',
+          description: `Borrow ${input.amount} USDC from vault`,
+          note: 'The recipient arg will be replaced with the connected wallet address by the frontend',
+          transactions: [{
+            to: VAULT,
+            data,
+            value: '0',
+            functionName: 'borrow',
+            args: { recipient: 'CONNECTED_WALLET', amount: amount.toString() },
+            chainId: 48816,
+          }],
+        }
+        return `@@TX${JSON.stringify(tx)}@@TX`
       }
-      case 'verify_and_borrow': {
-        const sig = input.signature as `0x${string}`
-        const valid = await verifySignature(input.address as Address, sig)
-        if (!valid) return 'Signature verification failed. Challenge may have expired or signature is invalid. Generate a new challenge.'
-        const challenge = consumeChallenge(input.address as Address)
-        if (!challenge) return 'Challenge already consumed or not found. Generate a new challenge.'
-        const result = await borrowUSDC(input.address as Address, challenge.amount)
-        return `Signature verified. Borrow executed: ${result.amount} → ${result.recipient}. Tx: ${result.hash}`
+
+      case 'prepare_repay': {
+        const amount = parseUnits(input.amount, 6)
+        const approveData = encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [VAULT, amount] })
+        const repayData = encodeFunctionData({ abi: VAULT_ABI, functionName: 'repay', args: ['0x0000000000000000000000000000000000000000' as Address, amount] })
+        const tx = {
+          type: 'transaction',
+          action: 'repay',
+          description: `Repay ${input.amount} USDC debt`,
+          transactions: [
+            {
+              to: USDC,
+              data: approveData,
+              value: '0',
+              functionName: 'approve',
+              args: { spender: VAULT, amount: amount.toString() },
+              chainId: 48816,
+              step: 1,
+              stepDescription: 'Approve USDC spend',
+            },
+            {
+              to: VAULT,
+              data: repayData,
+              value: '0',
+              functionName: 'repay',
+              args: { onBehalfOf: 'CONNECTED_WALLET', amount: amount.toString() },
+              chainId: 48816,
+              step: 2,
+              stepDescription: 'Repay USDC to vault',
+            },
+          ],
+        }
+        return `@@TX${JSON.stringify(tx)}@@TX`
       }
-      case 'repay_usdc': {
-        const target = (input.on_behalf_of === 'self' ? selfAddress : input.on_behalf_of) as Address
-        const result = await repayUSDC(target, input.amount)
-        return `Repaid ${result.amount} on behalf of ${result.onBehalfOf}. Tx: ${result.hash}`
+
+      case 'prepare_withdraw': {
+        const amount = parseEther(input.amount)
+        const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'withdraw', args: [amount] })
+        const tx = {
+          type: 'transaction',
+          action: 'withdraw',
+          description: `Withdraw ${input.amount} BTC collateral`,
+          transactions: [{
+            to: VAULT,
+            data,
+            value: '0',
+            functionName: 'withdraw',
+            args: { amount: amount.toString() },
+            chainId: 48816,
+          }],
+        }
+        return `@@TX${JSON.stringify(tx)}@@TX`
       }
-      case 'withdraw_btc': {
-        const result = await withdrawBTC(input.amount)
-        return `Withdrew ${result.amount}. Tx: ${result.hash}`
-      }
+
       case 'skill_credit_score': {
-        const target = (input.address === 'self' ? selfAddress : input.address) as Address
-        const data = await fetchCreditScore(target)
+        const data = await fetchCreditScore(input.address as Address)
         return JSON.stringify(data, null, 2)
       }
       case 'skill_borrow_capacity': {
-        const target = (input.address === 'self' ? selfAddress : input.address) as Address
-        const data = await fetchBorrowCapacity(target)
+        const data = await fetchBorrowCapacity(input.address as Address)
         return JSON.stringify(data, null, 2)
       }
       case 'skill_market_rate': {
