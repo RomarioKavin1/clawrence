@@ -1,0 +1,16 @@
+# Foundry build artifacts
+/out/
+/cache/
+
+# Dependencies (installed via forge install)
+/lib/
+
+# Env — never commit private keys
+.env
+
+# Coverage reports
+/lcov.info
+/coverage/
+
+# OS
+.DS_Store
