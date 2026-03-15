@@ -50,14 +50,14 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         creditScore = ICreditScore(_creditScore);
     }
 
-    /// @notice Deposit native BTC as collateral
-    function deposit() external payable nonReentrant {
+    /// @notice Deposit native BTC as collateral — only the agent (owner) can call
+    function deposit() external payable onlyOwner nonReentrant {
         if (msg.value == 0) revert ZeroAmount();
         collateral[msg.sender] += msg.value;
         emit Deposited(msg.sender, msg.value);
     }
 
-    function withdraw(uint256 amount) external nonReentrant {
+    function withdraw(uint256 amount) external onlyOwner nonReentrant {
         if (amount == 0) revert ZeroAmount();
         require(collateral[msg.sender] >= amount, "Insufficient collateral");
         collateral[msg.sender] -= amount;
@@ -70,7 +70,7 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function borrow(uint256 amount) external nonReentrant {
+    function borrow(uint256 amount) external onlyOwner nonReentrant {
         if (amount == 0) revert ZeroAmount();
         uint256 s = creditScore.getScore(msg.sender);
         if (s < MIN_SCORE) revert ScoreTooLow(s);
@@ -88,7 +88,7 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Borrowed(msg.sender, amount, hf);
     }
 
-    function repay(uint256 amount) external nonReentrant {
+    function repay(uint256 amount) external onlyOwner nonReentrant {
         if (debt[msg.sender] == 0) revert NoDebt();
         if (amount == 0) revert ZeroAmount();
         uint256 loanAge = block.timestamp - loanTimestamp[msg.sender];

@@ -8,6 +8,7 @@ import {MockDIAOracle} from "./mocks/MockDIAOracle.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockERC8004} from "./mocks/MockERC8004.sol";
 
+/// @notice The test contract IS the owner/agent — it deploys the vault.
 contract ClawrenceVaultTest is Test {
     ClawrenceVault vault;
     CreditScore cs;
@@ -15,8 +16,8 @@ contract ClawrenceVaultTest is Test {
     MockERC20 usdc;
     MockERC8004 registry;
 
-    address alice = address(0xA11CE);
-    address bob   = address(0xB0B);
+    // bob is a third party — can liquidate but not touch the vault otherwise
+    address bob = address(0xB0B);
 
     uint128 constant BTC_PRICE = 200_000_000_000; // $2000 with 8 decimals
 
@@ -28,165 +29,148 @@ contract ClawrenceVaultTest is Test {
         vault = new ClawrenceVault(address(usdc), address(oracle), address(cs));
         cs.setVault(address(vault));
         usdc.mint(address(vault), 1_000_000e6);
-        // Fund alice and bob with native BTC (ETH in Anvil)
-        vm.deal(alice, 10 ether);
+        // Fund this contract (the agent) and bob
+        vm.deal(address(this), 10 ether);
         vm.deal(bob, 10 ether);
-        // Approve USDC for repayments
-        vm.prank(alice); usdc.approve(address(vault), type(uint256).max);
-        vm.prank(bob);   usdc.approve(address(vault), type(uint256).max);
+        // Approve USDC for repayments from this contract
+        usdc.approve(address(vault), type(uint256).max);
     }
 
+    // Allow test contract to receive BTC
+    receive() external payable {}
+
     function test_deposit() public {
-        vm.prank(alice); vault.deposit{value: 1 ether}();
-        assertEq(vault.collateral(alice), 1 ether);
+        vault.deposit{value: 1 ether}();
+        assertEq(vault.collateral(address(this)), 1 ether);
     }
 
     function test_depositZeroReverts() public {
-        vm.prank(alice);
         vm.expectRevert(ClawrenceVault.ZeroAmount.selector);
         vault.deposit{value: 0}();
     }
 
+    function test_nonOwnerDepositReverts() public {
+        vm.prank(bob);
+        vm.expectRevert();
+        vault.deposit{value: 1 ether}();
+    }
+
     function test_collateralValueUSD() public {
-        vm.prank(alice); vault.deposit{value: 1 ether}();
-        assertEq(vault.getCollateralValueUSD(alice), 2_000e6);
+        vault.deposit{value: 1 ether}();
+        assertEq(vault.getCollateralValueUSD(address(this)), 2_000e6);
     }
 
     function test_staleOracleReverts() public {
-        vm.prank(alice); vault.deposit{value: 1 ether}();
-        oracle.setStale(); // sets priceTimestamp = 0
-        vm.warp(3601);    // block.timestamp = 3601, so 3601 - 0 > 1 hour
+        vault.deposit{value: 1 ether}();
+        oracle.setStale();
+        vm.warp(3601);
         vm.expectRevert(ClawrenceVault.StaleOracle.selector);
-        vault.getCollateralValueUSD(alice);
+        vault.getCollateralValueUSD(address(this));
     }
 
     function test_maxBorrowWithDefaultScore() public {
-        vm.prank(alice); vault.deposit{value: 1 ether}();
-        assertEq(vault.getMaxBorrow(alice), 1_500e6);
+        vault.deposit{value: 1 ether}();
+        assertEq(vault.getMaxBorrow(address(this)), 1_500e6);
     }
 
     function test_borrow() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(500e6);
-        vm.stopPrank();
-        assertEq(vault.debt(alice), 500e6);
-        assertEq(usdc.balanceOf(alice), 500e6);
+        assertEq(vault.debt(address(this)), 500e6);
+        assertEq(usdc.balanceOf(address(this)), 500e6);
     }
 
     function test_borrowRevertsExceedsMax() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vm.expectRevert();
         vault.borrow(2_000e6);
-        vm.stopPrank();
     }
 
     function test_borrowCooldown() public {
-        vm.startPrank(alice);
         vault.deposit{value: 2 ether}();
         vault.borrow(100e6);
         vm.warp(block.timestamp + 2 hours);
-        oracle.setPrice(BTC_PRICE); // refresh oracle so it's not stale
+        oracle.setPrice(BTC_PRICE);
         vault.repay(100e6);
-        // Only 2h since borrow, cooldown is 6h — should revert with CooldownActive
         vm.expectRevert();
         vault.borrow(100e6);
-        vm.stopPrank();
     }
 
     function test_borrowAfterCooldown() public {
-        vm.startPrank(alice);
         vault.deposit{value: 2 ether}();
         vault.borrow(100e6);
         vm.warp(block.timestamp + 2 hours);
-        oracle.setPrice(BTC_PRICE); // refresh oracle
+        oracle.setPrice(BTC_PRICE);
         vault.repay(100e6);
-        vm.warp(block.timestamp + 5 hours); // total 7h since borrow — past cooldown
-        oracle.setPrice(BTC_PRICE); // refresh oracle
+        vm.warp(block.timestamp + 5 hours);
+        oracle.setPrice(BTC_PRICE);
         vault.borrow(100e6);
-        vm.stopPrank();
     }
 
     function test_healthFactor() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(500e6);
-        vm.stopPrank();
-        assertEq(vault.getHealthFactor(alice), 400);
+        assertEq(vault.getHealthFactor(address(this)), 400);
     }
 
     function test_healthFactorMaxWithNoDebt() public view {
-        assertEq(vault.getHealthFactor(alice), type(uint256).max);
+        assertEq(vault.getHealthFactor(address(this)), type(uint256).max);
     }
 
     function test_repay() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(500e6);
         vm.warp(block.timestamp + 2 hours);
         vault.repay(500e6);
-        vm.stopPrank();
-        assertEq(vault.debt(alice), 0);
+        assertEq(vault.debt(address(this)), 0);
     }
 
     function test_repayUpdatesScore() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(500e6);
         vm.warp(block.timestamp + 2 hours);
-        uint256 scoreBefore = cs.getScore(alice);
+        uint256 scoreBefore = cs.getScore(address(this));
         vault.repay(500e6);
-        vm.stopPrank();
-        assertGt(cs.getScore(alice), scoreBefore);
+        assertGt(cs.getScore(address(this)), scoreBefore);
     }
 
     function test_repayTooEarlyReverts() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(100e6);
         vm.expectRevert();
         vault.repay(100e6);
-        vm.stopPrank();
     }
 
     function test_repayNoDebtReverts() public {
-        vm.prank(alice);
         vm.expectRevert(ClawrenceVault.NoDebt.selector);
         vault.repay(100e6);
     }
 
     function test_liquidate() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(1_000e6);
-        vm.stopPrank();
         oracle.setPrice(90_000_000_000);
         uint256 bobEthBefore = bob.balance;
-        vm.prank(bob); vault.liquidate(alice);
-        assertEq(vault.debt(alice), 0);
-        assertEq(vault.collateral(alice), 0);
+        vm.prank(bob); vault.liquidate(address(this));
+        assertEq(vault.debt(address(this)), 0);
+        assertEq(vault.collateral(address(this)), 0);
         assertGt(bob.balance, bobEthBefore);
     }
 
     function test_liquidateHealthyPositionReverts() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(500e6);
-        vm.stopPrank();
         vm.prank(bob);
         vm.expectRevert(ClawrenceVault.NotLiquidatable.selector);
-        vault.liquidate(alice);
+        vault.liquidate(address(this));
     }
 
     function test_liquidatePenalizesScore() public {
-        vm.startPrank(alice);
         vault.deposit{value: 1 ether}();
         vault.borrow(1_000e6);
-        vm.stopPrank();
         oracle.setPrice(90_000_000_000);
-        uint256 scoreBefore = cs.getScore(alice);
-        vm.prank(bob); vault.liquidate(alice);
-        assertLt(cs.getScore(alice), scoreBefore);
+        uint256 scoreBefore = cs.getScore(address(this));
+        vm.prank(bob); vault.liquidate(address(this));
+        assertLt(cs.getScore(address(this)), scoreBefore);
     }
 }
