@@ -15,3 +15,7 @@ Thumbs.db
 CLAUDE.md
 .claude
 docs
+/test-example
+skill-server/bun.lock
+agent/bun.lock
+test-requests.txt

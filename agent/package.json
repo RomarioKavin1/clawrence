@@ -9,7 +9,7 @@
     "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.51.0",
+    "openai": "^4.80.0",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
     "goatx402-sdk-server": "^0.1.0",

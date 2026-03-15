@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { type Address } from 'viem'
 import { getPosition, depositBTC, borrowUSDC, repayUSDC, withdrawBTC, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate, generateChallenge, verifySignature, consumeChallenge } from './tools.js'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 const SYSTEM_PROMPT = `You are Clawrence — an autonomous credit agent on GOAT Network.
 
@@ -44,105 +44,132 @@ After any transaction, check the updated position and report it.
 Always show numbers from on-chain data. Never guess.
 Sign off important messages with: "— Clawrence"`
 
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: OpenAI.ChatCompletionTool[] = [
   {
-    name: 'get_position',
-    description: 'Get the full on-chain position for an address: credit score, LTV tier, collateral, debt, health factor, max borrow, repay streak.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        address: { type: 'string', description: 'Wallet address to query. Use "self" to query the agent\'s own address.' },
+    type: 'function',
+    function: {
+      name: 'get_position',
+      description: 'Get the full on-chain position for an address: credit score, LTV tier, collateral, debt, health factor, max borrow, repay streak.',
+      parameters: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', description: 'Wallet address to query. Use "self" to query the agent\'s own address.' },
+        },
+        required: ['address'],
       },
-      required: ['address'],
     },
   },
   {
-    name: 'deposit_btc',
-    description: 'Deposit native BTC as collateral into the vault. Executes a real on-chain transaction.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        amount: { type: 'string', description: 'Amount of BTC to deposit, e.g. "0.01"' },
+    type: 'function',
+    function: {
+      name: 'deposit_btc',
+      description: 'Deposit native BTC as collateral into the vault. Executes a real on-chain transaction.',
+      parameters: {
+        type: 'object',
+        properties: {
+          amount: { type: 'string', description: 'Amount of BTC to deposit, e.g. "0.01"' },
+        },
+        required: ['amount'],
       },
-      required: ['amount'],
     },
   },
   {
-    name: 'generate_challenge',
-    description: 'Generate a challenge message that an agent must sign to prove ownership of their address before a borrow can be executed. Call this first whenever an agent requests a borrow.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        address: { type: 'string', description: 'The agent address requesting the borrow (0x-prefixed)' },
-        amount: { type: 'string', description: 'The USDC amount they want to borrow, e.g. "50"' },
+    type: 'function',
+    function: {
+      name: 'generate_challenge',
+      description: 'Generate a challenge message that an agent must sign to prove ownership of their address before a borrow can be executed. Call this first whenever an agent requests a borrow.',
+      parameters: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', description: 'The agent address requesting the borrow (0x-prefixed)' },
+          amount: { type: 'string', description: 'The USDC amount they want to borrow, e.g. "50"' },
+        },
+        required: ['address', 'amount'],
       },
-      required: ['address', 'amount'],
     },
   },
   {
-    name: 'verify_and_borrow',
-    description: 'Verify an agent\'s signature against the pending challenge, then execute the borrow if valid. Only call this after generate_challenge and after receiving the signature from the agent.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        address: { type: 'string', description: 'The agent address (must match the one used in generate_challenge)' },
-        signature: { type: 'string', description: 'The 0x-prefixed hex signature from the agent' },
+    type: 'function',
+    function: {
+      name: 'verify_and_borrow',
+      description: 'Verify an agent\'s signature against the pending challenge, then execute the borrow if valid. Only call this after generate_challenge and after receiving the signature from the agent.',
+      parameters: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', description: 'The agent address (must match the one used in generate_challenge)' },
+          signature: { type: 'string', description: 'The 0x-prefixed hex signature from the agent' },
+        },
+        required: ['address', 'signature'],
       },
-      required: ['address', 'signature'],
     },
   },
   {
-    name: 'repay_usdc',
-    description: 'Repay outstanding USDC debt on behalf of an address. The agent calling this pays the USDC; debt is reduced for on_behalf_of. Automatically approves USDC if needed.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        on_behalf_of: { type: 'string', description: 'The address whose debt to repay. Use "self" to repay the agent\'s own debt.' },
-        amount: { type: 'string', description: 'Amount of USDC to repay, e.g. "50"' },
+    type: 'function',
+    function: {
+      name: 'repay_usdc',
+      description: 'Repay outstanding USDC debt on behalf of an address. The agent calling this pays the USDC; debt is reduced for on_behalf_of. Automatically approves USDC if needed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          on_behalf_of: { type: 'string', description: 'The address whose debt to repay. Use "self" to repay the agent\'s own debt.' },
+          amount: { type: 'string', description: 'Amount of USDC to repay, e.g. "50"' },
+        },
+        required: ['on_behalf_of', 'amount'],
       },
-      required: ['on_behalf_of', 'amount'],
     },
   },
   {
-    name: 'withdraw_btc',
-    description: 'Withdraw BTC collateral from the vault. Only allowed if health factor stays above 1.2x after withdrawal.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        amount: { type: 'string', description: 'Amount of BTC to withdraw, e.g. "0.005"' },
+    type: 'function',
+    function: {
+      name: 'withdraw_btc',
+      description: 'Withdraw BTC collateral from the vault. Only allowed if health factor stays above 1.2x after withdrawal.',
+      parameters: {
+        type: 'object',
+        properties: {
+          amount: { type: 'string', description: 'Amount of BTC to withdraw, e.g. "0.005"' },
+        },
+        required: ['amount'],
       },
-      required: ['amount'],
     },
   },
   {
-    name: 'skill_credit_score',
-    description: 'Fetch credit score data via the x402 paywalled skill server ($0.01 USDC). Returns score, tier, LTV, streak, and decay status for an address. Use this to pay for on-chain intelligence.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        address: { type: 'string', description: 'Address to query. Use "self" for the agent\'s own address.' },
+    type: 'function',
+    function: {
+      name: 'skill_credit_score',
+      description: 'Fetch credit score data via the x402 paywalled skill server ($0.01 USDC). Returns score, tier, LTV, streak, and decay status for an address.',
+      parameters: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', description: 'Address to query. Use "self" for the agent\'s own address.' },
+        },
+        required: ['address'],
       },
-      required: ['address'],
     },
   },
   {
-    name: 'skill_borrow_capacity',
-    description: 'Fetch borrow capacity data via the x402 paywalled skill server ($0.01 USDC). Returns collateral value, max borrow, current debt, health factor.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        address: { type: 'string', description: 'Address to query. Use "self" for the agent\'s own address.' },
+    type: 'function',
+    function: {
+      name: 'skill_borrow_capacity',
+      description: 'Fetch borrow capacity data via the x402 paywalled skill server ($0.01 USDC). Returns collateral value, max borrow, current debt, health factor.',
+      parameters: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', description: 'Address to query. Use "self" for the agent\'s own address.' },
+        },
+        required: ['address'],
       },
-      required: ['address'],
     },
   },
   {
-    name: 'skill_market_rate',
-    description: 'Fetch market rate data via the x402 paywalled skill server ($0.01 USDC). Returns total vault liquidity, utilization %, and implied APR.',
-    input_schema: {
-      type: 'object',
-      properties: {},
-      required: [],
+    type: 'function',
+    function: {
+      name: 'skill_market_rate',
+      description: 'Fetch market rate data via the x402 paywalled skill server ($0.01 USDC). Returns total vault liquidity, utilization %, and implied APR.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
     },
   },
 ]
@@ -216,49 +243,76 @@ export async function runClawrence(
   messages: MessageParam[],
   onChunk?: (text: string) => void,
 ): Promise<string> {
-  const history: Anthropic.MessageParam[] = messages.map(m => ({
-    role: m.role,
-    content: m.content,
-  }))
+  const history: OpenAI.ChatCompletionMessageParam[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+  ]
 
   let fullResponse = ''
 
   // Agentic loop — keeps going until no more tool calls
   while (true) {
-    const stream = client.messages.stream({
-      model: 'claude-opus-4-6',
+    const stream = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
       tools: TOOLS,
       messages: history,
+      stream: true,
     })
 
-    stream.on('text', (delta) => {
-      fullResponse += delta
-      onChunk?.(delta)
-    })
+    let assistantContent = ''
+    const toolCalls: Map<number, { id: string; name: string; arguments: string }> = new Map()
 
-    const response = await stream.finalMessage()
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta
 
-    if (response.stop_reason === 'end_turn') break
+      if (delta?.content) {
+        assistantContent += delta.content
+        fullResponse += delta.content
+        onChunk?.(delta.content)
+      }
 
-    if (response.stop_reason === 'tool_use') {
-      history.push({ role: 'assistant', content: response.content })
-
-      const toolResults: Anthropic.ToolResultBlockParam[] = []
-      for (const block of response.content) {
-        if (block.type === 'tool_use') {
-          onChunk?.(`\n[calling ${block.name}...]\n`)
-          const result = await executeTool(block.name, block.input as Record<string, string>)
-          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result })
+      if (delta?.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          if (!toolCalls.has(tc.index)) {
+            toolCalls.set(tc.index, { id: tc.id || '', name: tc.function?.name || '', arguments: '' })
+          }
+          const existing = toolCalls.get(tc.index)!
+          if (tc.id) existing.id = tc.id
+          if (tc.function?.name) existing.name = tc.function.name
+          if (tc.function?.arguments) existing.arguments += tc.function.arguments
         }
       }
-      history.push({ role: 'user', content: toolResults })
-      fullResponse = '' // reset — next iteration will stream the final answer
-      continue
     }
 
-    break
+    // No tool calls — we're done
+    if (toolCalls.size === 0) break
+
+    // Build assistant message with tool calls
+    const assistantMsg: OpenAI.ChatCompletionAssistantMessageParam = {
+      role: 'assistant',
+      content: assistantContent || null,
+      tool_calls: Array.from(toolCalls.values()).map(tc => ({
+        id: tc.id,
+        type: 'function' as const,
+        function: { name: tc.name, arguments: tc.arguments },
+      })),
+    }
+    history.push(assistantMsg)
+
+    // Execute each tool and add results
+    for (const tc of toolCalls.values()) {
+      onChunk?.(`\n[calling ${tc.name}...]\n`)
+      const args = JSON.parse(tc.arguments || '{}')
+      const result = await executeTool(tc.name, args)
+      history.push({
+        role: 'tool',
+        tool_call_id: tc.id,
+        content: result,
+      })
+    }
+
+    fullResponse = '' // reset — next iteration will stream the final answer
   }
 
   return fullResponse
