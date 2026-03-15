@@ -1,49 +1,89 @@
-import { formatUnits, parseEther, parseUnits, recoverMessageAddress, type Address } from 'viem'
+import { formatUnits, parseEther, parseUnits, verifyTypedData, type Address } from 'viem'
 import { publicClient, getWalletClient } from '../lib/client.js'
 import { VAULT_ABI, CREDIT_SCORE_ABI, ERC20_ABI } from '../lib/abis.js'
-
-// ── Challenge store (in-memory, expires in 5 minutes) ─────────────────────────
-interface Challenge { message: string; amount: string; expiresAt: number }
-const pendingChallenges = new Map<string, Challenge>()
-
-export function generateChallenge(address: Address, amountUsdc: string): string {
-  const nonce = Date.now()
-  const expiresAt = nonce + 5 * 60 * 1000
-  const message = [
-    'Clawrence borrow authorization',
-    `Address: ${address}`,
-    `Amount: ${amountUsdc} USDC`,
-    `Nonce: ${nonce}`,
-    `Expires: ${new Date(expiresAt).toISOString()}`,
-  ].join('\n')
-  pendingChallenges.set(address.toLowerCase(), { message, amount: amountUsdc, expiresAt })
-  return message
-}
-
-export async function verifySignature(address: Address, signature: `0x${string}`): Promise<boolean> {
-  const key = address.toLowerCase()
-  const challenge = pendingChallenges.get(key)
-  if (!challenge) return false
-  if (Date.now() > challenge.expiresAt) { pendingChallenges.delete(key); return false }
-  const recovered = await recoverMessageAddress({ message: challenge.message, signature })
-  return recovered.toLowerCase() === key
-}
-
-export function getPendingChallenge(address: Address): Challenge | undefined {
-  return pendingChallenges.get(address.toLowerCase())
-}
-
-export function consumeChallenge(address: Address): Challenge | undefined {
-  const key = address.toLowerCase()
-  const c = pendingChallenges.get(key)
-  pendingChallenges.delete(key)
-  return c
-}
 
 const VAULT    = process.env.VAULT_ADDRESS        as Address
 const CS       = process.env.CREDIT_SCORE_ADDRESS as Address
 const USDC     = process.env.USDC_ADDRESS         as Address
 const PK       = process.env.PRIVATE_KEY          as `0x${string}`
+
+// ── EIP-712 Withdraw Challenge ──────────────────────────────────────────────
+
+const EIP712_DOMAIN = {
+  name: 'Clawrence',
+  version: '1',
+  chainId: 48816,
+  verifyingContract: VAULT,
+} as const
+
+const WITHDRAW_TYPES = {
+  Withdraw: [
+    { name: 'owner', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+    { name: 'nonce', type: 'uint256' },
+    { name: 'deadline', type: 'uint256' },
+  ],
+} as const
+
+interface WithdrawChallenge {
+  domain: typeof EIP712_DOMAIN
+  types: typeof WITHDRAW_TYPES
+  message: { owner: Address; amount: string; nonce: string; deadline: string }
+  amount: string
+  expiresAt: number
+}
+
+const pendingWithdrawChallenges = new Map<string, WithdrawChallenge>()
+
+export function generateWithdrawChallenge(address: Address, amountBtc: string): WithdrawChallenge {
+  const nonce = Date.now()
+  const expiresAt = nonce + 5 * 60 * 1000 // 5 minutes
+  const amountWei = parseEther(amountBtc)
+
+  const challenge: WithdrawChallenge = {
+    domain: EIP712_DOMAIN,
+    types: WITHDRAW_TYPES,
+    message: {
+      owner: address,
+      amount: amountWei.toString(),
+      nonce: nonce.toString(),
+      deadline: expiresAt.toString(),
+    },
+    amount: amountBtc,
+    expiresAt,
+  }
+
+  pendingWithdrawChallenges.set(address.toLowerCase(), challenge)
+  return challenge
+}
+
+export async function verifyWithdrawSignature(address: Address, signature: `0x${string}`): Promise<boolean> {
+  const key = address.toLowerCase()
+  const challenge = pendingWithdrawChallenges.get(key)
+  if (!challenge) return false
+  if (Date.now() > challenge.expiresAt) {
+    pendingWithdrawChallenges.delete(key)
+    return false
+  }
+
+  const valid = await verifyTypedData({
+    address,
+    domain: challenge.domain,
+    types: challenge.types,
+    primaryType: 'Withdraw',
+    message: challenge.message,
+    signature,
+  })
+
+  return valid
+}
+
+export function consumeWithdrawChallenge(address: Address): WithdrawChallenge | undefined {
+  const key = address.toLowerCase()
+  const c = pendingWithdrawChallenges.get(key)
+  pendingWithdrawChallenges.delete(key)
+  return c
+}
 
 // ── Read tools ────────────────────────────────────────────────────────────────
 
@@ -84,54 +124,7 @@ export async function getPosition(address: Address) {
   }
 }
 
-// ── Write tools ───────────────────────────────────────────────────────────────
-
-export async function depositBTC(amountEther: string) {
-  const { client, account } = getWalletClient(PK)
-  const value = parseEther(amountEther)
-  const hash = await client.writeContract({
-    address: VAULT, abi: VAULT_ABI, functionName: 'deposit',
-    args: [], value,
-    account, chain: client.chain,
-  })
-  await publicClient.waitForTransactionReceipt({ hash })
-  return { hash, amount: `${amountEther} BTC` }
-}
-
-export async function borrowUSDC(recipient: Address, amountUsdc: string) {
-  const { client, account } = getWalletClient(PK)
-  const amount = parseUnits(amountUsdc, 6)
-  const hash = await client.writeContract({
-    address: VAULT, abi: VAULT_ABI, functionName: 'borrow',
-    args: [recipient, amount], account, chain: client.chain,
-  })
-  await publicClient.waitForTransactionReceipt({ hash })
-  return { hash, amount: `${amountUsdc} USDC`, recipient }
-}
-
-export async function repayUSDC(onBehalfOf: Address, amountUsdc: string) {
-  const { client, account } = getWalletClient(PK)
-  const amount = parseUnits(amountUsdc, 6)
-
-  const allowance = await publicClient.readContract({
-    address: USDC, abi: ERC20_ABI, functionName: 'allowance',
-    args: [account.address, VAULT],
-  })
-  if ((allowance as bigint) < amount) {
-    const approveTx = await client.writeContract({
-      address: USDC, abi: ERC20_ABI, functionName: 'approve',
-      args: [VAULT, amount], account, chain: client.chain,
-    })
-    await publicClient.waitForTransactionReceipt({ hash: approveTx })
-  }
-
-  const hash = await client.writeContract({
-    address: VAULT, abi: VAULT_ABI, functionName: 'repay',
-    args: [onBehalfOf, amount], account, chain: client.chain,
-  })
-  await publicClient.waitForTransactionReceipt({ hash })
-  return { hash, amount: `${amountUsdc} USDC`, onBehalfOf }
-}
+// ── Write tools (server-side execution) ──────────────────────────────────────
 
 export async function withdrawBTC(amountEther: string) {
   const { client, account } = getWalletClient(PK)

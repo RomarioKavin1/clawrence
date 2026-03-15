@@ -240,24 +240,27 @@ export function ClawrenceChat() {
         })
       }
 
-      // After streaming completes, check for @@TX and @@SIGN blocks
+      // After streaming completes, check for @@TX and @@SIGN blocks in the full stream
       const { clean: cleanTx, txBlocks } = extractTxBlocks(accumulated)
       const { clean: cleanAll, signBlocks } = extractSignBlocks(cleanTx)
 
-      // Update the message to remove the raw JSON markers
-      if (txBlocks.length > 0 || signBlocks.length > 0) {
-        const finalMessages = [...nextMessages, { role: 'clawrence' as const, content: cleanAll.trim() }]
-        setMessages(finalMessages)
+      // Clean up displayed message — remove markers, [calling...] lines, and extra whitespace
+      const displayText = cleanAll
+        .replace(/\[calling \w+\.\.\.\]/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
 
-        // Execute transactions
-        for (const tx of txBlocks) {
-          await executeTx(tx)
-        }
+      const finalMessages = [...nextMessages, { role: 'clawrence' as const, content: displayText }]
+      setMessages(finalMessages)
 
-        // Execute sign requests
-        for (const sign of signBlocks) {
-          await executeSign(sign, finalMessages)
-        }
+      // Execute transactions
+      for (const tx of txBlocks) {
+        await executeTx(tx)
+      }
+
+      // Execute sign requests
+      for (const sign of signBlocks) {
+        await executeSign(sign, finalMessages)
       }
     } catch {
       setMessages(prev => {

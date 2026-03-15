@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import { type Address, parseEther, parseUnits, encodeFunctionData } from 'viem'
-import { getPosition, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate } from './tools.js'
+import { getPosition, withdrawBTC, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate, generateWithdrawChallenge, verifyWithdrawSignature, consumeWithdrawChallenge } from './tools.js'
 import { VAULT_ABI, ERC20_ABI } from '../lib/abis.js'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -18,26 +18,39 @@ You help users interact with the ClawrenceVault on GOAT Testnet3.
 
 You can autonomously:
 - Check positions (yours or any address) — free, reads chain directly
-- Prepare deposit, borrow, repay, withdraw transactions — returns contract call details for the user's wallet (MetaMask)
+- Prepare deposit, borrow, repay transactions — returns contract call details for the user's wallet (MetaMask)
+- Execute withdrawals on behalf of users after they sign an EIP-712 authorization
 - Call paywalled x402 skill endpoints — costs $0.01 USDC each:
   - skill_credit_score: enriched score data with decay status
   - skill_borrow_capacity: collateral value, max borrow, health factor
   - skill_market_rate: vault utilization and implied APR
 
-IMPORTANT: For write operations (deposit, borrow, repay, withdraw), you do NOT execute transactions yourself.
-Instead, you call the tool which returns a structured transaction object. Include that EXACT JSON block
-in your response so the frontend can detect it and trigger MetaMask. The block is wrapped in @@TX{...}@@TX markers.
+IMPORTANT: For deposit, borrow, and repay — you return structured transaction data wrapped in @@TX{...}@@TX markers.
+The frontend detects these and triggers MetaMask for the user to sign directly.
+
+WITHDRAW FLOW (different — server-side execution):
+1. User requests a withdrawal with amount and their address
+2. You call prepare_withdraw_sign with their address and amount
+3. This returns EIP-712 typed data wrapped in @@SIGN{...}@@SIGN markers
+4. The frontend detects @@SIGN and prompts MetaMask signTypedData_v4
+5. User signs, frontend sends the signature back in the next message
+6. You call execute_withdraw with the address, amount, and signature
+7. The server verifies the signature and executes the withdrawal from the skill server wallet
+8. Never skip the signature step. Never execute a withdrawal without a valid signature.
 
 For repay, always include the approve transaction first, then the repay transaction.
 
-Use the skill tools when you need enriched market data or when explicitly asked about market conditions.
-For basic position checks, prefer get_position (free, reads chain directly).
+CRITICAL: For credit score, position, borrow capacity, health factor, or any user data query — ALWAYS use get_position.
+It is free, fast, and reads directly from the blockchain. It returns: credit score, tier, LTV, collateral, debt, health factor, max borrow, and repay streak.
+NEVER use skill_credit_score or skill_borrow_capacity for basic user queries — those are x402 paywalled and may fail.
+Only use the skill_ tools when the user EXPLICITLY asks to "pay for" data or wants market-wide stats (skill_market_rate).
 
 Rules you enforce without exception:
 - Never borrow more than the max allowed by credit score
 - Warn if health factor would drop below 1.5x after a borrow
 - Refuse to borrow if score is below 30 (BLOCKED tier)
 - Always check the user's position before suggesting a borrow amount
+- Never execute a withdrawal without a verified EIP-712 signature
 
 When no address is specified for a query, ask the user for their wallet address.
 Always show numbers from on-chain data. Never guess.
@@ -103,14 +116,30 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
-      name: 'prepare_withdraw',
-      description: 'Prepare a withdraw transaction to withdraw BTC collateral from the vault. Returns transaction data for the user to sign via MetaMask.',
+      name: 'prepare_withdraw_sign',
+      description: 'Prepare an EIP-712 typed data object for the user to sign via MetaMask, authorizing a withdrawal. Returns the signing request wrapped in @@SIGN markers. Call this when a user requests a withdrawal.',
       parameters: {
         type: 'object',
         properties: {
+          address: { type: 'string', description: 'The user\'s wallet address (0x-prefixed)' },
           amount: { type: 'string', description: 'Amount of BTC to withdraw, e.g. "0.005"' },
         },
-        required: ['amount'],
+        required: ['address', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'execute_withdraw',
+      description: 'Verify the user\'s EIP-712 signature and execute the withdrawal from the skill server wallet. Only call this after prepare_withdraw_sign and after receiving the signature from the user.',
+      parameters: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', description: 'The user\'s wallet address (must match prepare_withdraw_sign)' },
+          signature: { type: 'string', description: 'The 0x-prefixed hex signature from MetaMask signTypedData_v4' },
+        },
+        required: ['address', 'signature'],
       },
     },
   },
@@ -237,23 +266,30 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         return `@@TX${JSON.stringify(tx)}@@TX`
       }
 
-      case 'prepare_withdraw': {
-        const amount = parseEther(input.amount)
-        const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'withdraw', args: [amount] })
-        const tx = {
-          type: 'transaction',
+      case 'prepare_withdraw_sign': {
+        const challenge = generateWithdrawChallenge(input.address as Address, input.amount)
+        const sign = {
+          type: 'sign',
           action: 'withdraw',
-          description: `Withdraw ${input.amount} BTC collateral`,
-          transactions: [{
-            to: VAULT,
-            data,
-            value: '0',
-            functionName: 'withdraw',
-            args: { amount: amount.toString() },
-            chainId: 48816,
-          }],
+          description: `Sign to authorize withdrawal of ${input.amount} BTC`,
+          eip712: {
+            domain: challenge.domain,
+            types: challenge.types,
+            primaryType: 'Withdraw',
+            message: challenge.message,
+          },
         }
-        return `@@TX${JSON.stringify(tx)}@@TX`
+        return `@@SIGN${JSON.stringify(sign)}@@SIGN`
+      }
+
+      case 'execute_withdraw': {
+        const sig = input.signature as `0x${string}`
+        const valid = await verifyWithdrawSignature(input.address as Address, sig)
+        if (!valid) return 'Signature verification failed. The signature is invalid or the challenge has expired. Please request a new withdrawal.'
+        const challenge = consumeWithdrawChallenge(input.address as Address)
+        if (!challenge) return 'Challenge already consumed or not found. Please request a new withdrawal.'
+        const result = await withdrawBTC(challenge.amount)
+        return `Signature verified. Withdrawal executed: ${challenge.amount} BTC. Tx: ${result.hash}`
       }
 
       case 'skill_credit_score': {
@@ -349,10 +385,26 @@ export async function runClawrence(
       onChunk?.(`\n[calling ${tc.name}...]\n`)
       const args = JSON.parse(tc.arguments || '{}')
       const result = await executeTool(tc.name, args)
+
+      // If result contains @@TX or @@SIGN, stream it directly to the frontend
+      // so the frontend can detect and act on it immediately
+      const txMatch = result.match(/@@TX[\s\S]*?@@TX/)
+      const signMatch = result.match(/@@SIGN[\s\S]*?@@SIGN/)
+      if (txMatch) {
+        onChunk?.(txMatch[0])
+        fullResponse += txMatch[0]
+      }
+      if (signMatch) {
+        onChunk?.(signMatch[0])
+        fullResponse += signMatch[0]
+      }
+
+      // Give the LLM a clean version without the markers
+      const cleanResult = result.replace(/@@TX[\s\S]*?@@TX/g, '[transaction data sent to frontend]').replace(/@@SIGN[\s\S]*?@@SIGN/g, '[signing request sent to frontend]')
       history.push({
         role: 'tool',
         tool_call_id: tc.id,
-        content: result,
+        content: cleanResult,
       })
     }
 
