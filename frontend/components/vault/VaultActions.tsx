@@ -31,8 +31,12 @@ export function VaultActions() {
 
     if (action === 'deposit') {
       writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'deposit', args: [], value: parsedAmount })
+    } else if (action === 'borrow') {
+      writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'borrow', args: [address, parsedAmount] })
+    } else if (action === 'repay') {
+      writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'repay', args: [address, parsedAmount] })
     } else {
-      writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: action, args: [parsedAmount] })
+      writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'withdraw', args: [parsedAmount] })
     }
   }
 
