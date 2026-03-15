@@ -282,42 +282,77 @@ export function ClawrenceChat() {
   }
 
   return (
-    <div className="glass-panel p-6 flex flex-col h-[600px] relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -z-10 group-hover:bg-emerald-500/10 transition-colors duration-500"></div>
+    <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: 600 }}>
 
-      <div className="text-xs text-gray-400 font-mono uppercase tracking-widest mb-6 flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-        Clawrence — Credit Agent
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1.25rem' }}>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#CAFF00', border: '1.5px solid rgba(0,0,0,0.2)' }} />
+        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: '#6B7260', textTransform: 'uppercase' }}>
+          Clawrence — Credit Agent
+        </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingRight: '0.25rem' }}>
         {messages.map((m, i) => {
           const displayed = renderContent(m.content)
           if (!displayed) return null
+          const isClawrence = m.role === 'clawrence'
           return (
-            <div key={i} className={`text-sm font-mono ${m.role === 'clawrence' ? 'text-green-400' : 'text-gray-300'}`}>
-              <span className="text-gray-600 mr-2">{m.role === 'clawrence' ? '>' : '$'}</span>
-              <span className="whitespace-pre-wrap">{displayed}</span>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <span style={{
+                fontFamily: 'Inter, sans-serif', fontSize: '0.68rem', fontWeight: 600,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                color: isClawrence ? '#111' : '#6B7260',
+              }}>
+                {isClawrence ? 'Clawrence' : 'You'}
+              </span>
+              <div style={{
+                fontFamily: isClawrence ? 'Space Grotesk, sans-serif' : 'Inter, sans-serif',
+                fontSize: '0.875rem',
+                fontWeight: isClawrence ? 500 : 400,
+                color: isClawrence ? '#111' : '#6B7260',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                background: isClawrence ? 'rgba(0,0,0,0.03)' : 'transparent',
+                borderRadius: '0.625rem',
+                padding: isClawrence ? '0.625rem 0.75rem' : '0',
+              }}>
+                {displayed}
+              </div>
             </div>
           )
         })}
         {loading && messages[messages.length - 1]?.content === '' && (
-          <div className="text-sm font-mono text-green-400 animate-pulse">{'> '}thinking...</div>
+          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: '#6B7260' }}>
+            thinking…
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
 
       {/* Transaction status bar */}
       {txStatus && (
-        <div className="mt-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs font-mono text-emerald-300 animate-pulse">
+        <div style={{
+          marginTop: '0.75rem',
+          padding: '0.5rem 0.875rem',
+          background: '#CAFF00',
+          borderRadius: '0.5rem',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          color: '#111',
+        }}>
           {txStatus}
         </div>
       )}
 
-      <div className="mt-4 flex gap-3">
+      {/* Input */}
+      <div style={{ display: 'flex', gap: '0.625rem', marginTop: '1rem' }}>
         <input
-          className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 shadow-inner transition-colors"
-          placeholder={isConnected ? "What's my credit score? / Deposit 0.01 BTC / ..." : "Connect your wallet first"}
+          className="input-field"
+          style={{ flex: 1 }}
+          placeholder={isConnected ? "What's my credit score? / Deposit 0.01 BTC / …" : "Connect your wallet first"}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
@@ -326,7 +361,7 @@ export function ClawrenceChat() {
         <button
           onClick={send}
           disabled={loading || !input.trim()}
-          className="bg-gradient-to-r from-emerald-400 to-cyan-500 hover:opacity-90 disabled:opacity-40 text-black font-bold px-6 py-3 rounded-xl text-sm transition-all duration-300 shadow-[0_0_15px_rgba(52,211,153,0.3)] hover:shadow-[0_0_25px_rgba(52,211,153,0.5)] transform hover:-translate-y-0.5"
+          className="btn-primary"
         >
           Send
         </button>

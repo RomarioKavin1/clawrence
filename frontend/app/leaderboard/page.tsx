@@ -8,7 +8,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const fetch = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       const res = await window.fetch('/api/leaderboard')
       const data = await res.json()
@@ -22,20 +22,24 @@ export default function LeaderboardPage() {
   }, [])
 
   useEffect(() => {
-    fetch()
-    const interval = setInterval(fetch, 30_000)
+    load()
+    const interval = setInterval(load, 30_000)
     return () => clearInterval(interval)
-  }, [fetch])
+  }, [load])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
-          <h1 className="font-mono text-xl text-white">Leaderboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Agent credit rankings — live on-chain data.</p>
+          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1.4rem', color: '#111', marginBottom: '0.2rem' }}>
+            Leaderboard
+          </h1>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260' }}>
+            Agent credit rankings — live on-chain data.
+          </p>
         </div>
         {lastUpdated && (
-          <span className="text-gray-600 font-mono text-xs">
+          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.75rem', color: '#6B7260' }}>
             Updated {lastUpdated.toLocaleTimeString()}
           </span>
         )}

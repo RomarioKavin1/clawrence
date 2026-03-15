@@ -22,31 +22,44 @@ export function IdentityCard({ isClawrence, agentId }: Props) {
 
   if (isClawrence) {
     return (
-      <div className="glass-panel p-6 space-y-4 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-3xl -z-10 group-hover:bg-green-500/10 transition-colors duration-500"></div>
-        <div className="flex items-center justify-between">
-          <h3 className="font-mono text-sm text-green-400 font-bold">CLAWRENCE</h3>
-          <span className="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded font-mono">x402 enabled</span>
+      <div className="card" style={{ padding: '1.5rem' }}>
+        {/* Header */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: '#CAFF00', borderRadius: 9999,
+          padding: '0.25rem 0.625rem', marginBottom: '1.25rem',
+        }}>
+          <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.75rem', color: '#111', letterSpacing: '-0.01em' }}>
+            CLAWRENCE
+          </span>
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.65rem', color: '#3a3f28', letterSpacing: '0.04em' }}>
+            x402 enabled
+          </span>
         </div>
-        <div className="space-y-1 text-xs font-mono text-gray-400">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Agent ID</span>
-            <span>{agentId ?? 'Pending registration'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Network</span>
-            <span>GOAT Testnet3</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Services</span>
-            <span>credit-score, borrow-capacity, market-rate</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Price</span>
-            <span>$0.01 USDC per call</span>
-          </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {[
+            { label: 'Agent ID', value: agentId != null ? String(agentId) : 'Pending registration' },
+            { label: 'Network', value: 'GOAT Testnet3' },
+            { label: 'Services', value: 'credit-score, borrow-capacity, market-rate' },
+            { label: 'Price', value: '$0.01 USDC per call' },
+          ].map(row => (
+            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: '#6B7260', whiteSpace: 'nowrap' }}>
+                {row.label}
+              </span>
+              <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '0.8rem', fontWeight: 600, color: '#111', textAlign: 'right' }}>
+                {row.value}
+              </span>
+            </div>
+          ))}
         </div>
-        <p className="text-xs text-gray-600 font-mono italic border-t border-gray-800 pt-3">
+
+        <p style={{
+          fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', fontStyle: 'italic',
+          color: '#6B7260', borderTop: '1px solid rgba(0,0,0,0.07)',
+          paddingTop: '1rem', marginTop: '1rem',
+        }}>
           &ldquo;I&apos;m Clawrence. Not the bank. Better.&rdquo;
         </p>
       </div>
@@ -55,34 +68,42 @@ export function IdentityCard({ isClawrence, agentId }: Props) {
 
   if (!isConnected) {
     return (
-      <div className="glass-panel text-center text-gray-500 py-12 font-mono text-sm">
-        Connect wallet to view your identity
+      <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260' }}>
+          Connect wallet to view your identity
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="glass-panel p-6 space-y-4 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -z-10 group-hover:bg-cyan-500/10 transition-colors duration-500"></div>
-      <div className="flex items-center justify-between">
-        <h3 className="font-mono text-sm text-white font-bold">
-          {address?.slice(0, 6)}...{address?.slice(-4)}
-        </h3>
+    <div className="card" style={{ padding: '1.5rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: '#111' }}>
+          {address?.slice(0, 6)}…{address?.slice(-4)}
+        </span>
         <ScoreBadge score={Number(score ?? 50n)} />
       </div>
-      <div className="space-y-1 text-xs font-mono text-gray-400">
-        <div className="flex justify-between">
-          <span className="text-gray-600">Credit Score</span>
-          <span className="text-green-400">{String(score ?? 50n)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Network</span>
-          <span>GOAT Testnet3</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">ERC-8004 Agent ID</span>
-          <span className="text-gray-600">{agentId ? `#${agentId}` : 'Not registered'}</span>
-        </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {[
+          { label: 'Credit Score', value: String(score ?? 50n), highlight: true },
+          { label: 'Network', value: 'GOAT Testnet3', highlight: false },
+          { label: 'ERC-8004 Agent ID', value: agentId != null ? `#${agentId}` : 'Not registered', highlight: false },
+        ].map(row => (
+          <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: '#6B7260' }}>
+              {row.label}
+            </span>
+            <span style={{
+              fontFamily: 'Space Grotesk, sans-serif', fontSize: '0.8rem', fontWeight: 700,
+              color: row.highlight ? '#111' : '#6B7260',
+            }}>
+              {row.value}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )

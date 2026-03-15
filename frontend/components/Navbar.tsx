@@ -4,43 +4,61 @@ import Link from 'next/link'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { usePathname } from 'next/navigation'
 
+const links = [
+  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Vault', path: '/vault' },
+  { name: 'Leaderboard', path: '/leaderboard' },
+  { name: 'Identity', path: '/identity' },
+]
+
 export function Navbar() {
   const pathname = usePathname()
-  
+
   return (
-    <nav className="sticky top-0 z-50 border-b border-white/5 bg-black/40 backdrop-blur-xl px-4 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-10">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-bold shadow-[0_0_15px_rgba(52,211,153,0.3)] group-hover:shadow-[0_0_25px_rgba(52,211,153,0.6)] transition-shadow duration-300">
-              C
+    <nav style={{ backgroundColor: '#B8BFB0', position: 'sticky', top: 0, zIndex: 50, padding: '0.875rem 1.5rem' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+        {/* Left: logo + links */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '0.5rem',
+              background: '#CAFF00', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1rem', color: '#111', lineHeight: 1 }}>C</span>
             </div>
-            <span className="font-mono font-bold text-white text-xl tracking-tight">CLAWRENCE</span>
+            <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#111', letterSpacing: '-0.02em' }}>
+              CLAWRENCE
+            </span>
           </Link>
-          <div className="hidden md:flex gap-1 items-center bg-white/5 rounded-full px-1 py-1 border border-white/5">
-            {[
-              { name: 'Dashboard', path: '/' },
-              { name: 'Vault', path: '/vault' },
-              { name: 'Leaderboard', path: '/leaderboard' },
-              { name: 'Identity', path: '/identity' }
-            ].map((link) => (
-              <Link 
-                key={link.path} 
-                href={link.path} 
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                  pathname === link.path 
-                    ? 'bg-white/10 text-white shadow-sm' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            {links.map(link => {
+              const active = pathname === link.path
+              return (
+                <Link
+                  key={link.path}
+                  href={link.path}
+                  style={{
+                    textDecoration: 'none',
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                    padding: '0.4rem 0.875rem',
+                    borderRadius: 9999,
+                    background: active ? '#111' : 'transparent',
+                    color: active ? '#fff' : '#6B7260',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {link.name}
+                </Link>
+              )
+            })}
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <ConnectButton showBalance={false} />
-        </div>
+
+        <ConnectButton showBalance={false} />
       </div>
     </nav>
   )

@@ -2,18 +2,26 @@ import { IdentityCard } from '@/components/identity/IdentityCard'
 
 export default function IdentityPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-mono text-xl text-white">Identity</h1>
-        <p className="text-gray-500 text-sm mt-1">ERC-8004 agent identities on GOAT Testnet3.</p>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '1.4rem', color: '#111', marginBottom: '0.2rem' }}>
+          Identity
+        </h1>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: '#6B7260' }}>
+          ERC-8004 agent identities on GOAT Testnet3.
+        </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
-          <h2 className="font-mono text-xs text-gray-500 uppercase tracking-widest mb-3">Clawrence</h2>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: '#6B7260', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+            Clawrence
+          </p>
           <IdentityCard isClawrence />
         </div>
         <div>
-          <h2 className="font-mono text-xs text-gray-500 uppercase tracking-widest mb-3">Your Identity</h2>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.68rem', letterSpacing: '0.07em', color: '#6B7260', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+            Your Identity
+          </p>
           <IdentityCard />
         </div>
       </div>
