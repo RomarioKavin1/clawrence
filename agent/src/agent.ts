@@ -1,12 +1,13 @@
 import OpenAI from 'openai'
 import { type Address, parseEther, parseUnits, encodeFunctionData } from 'viem'
-import { getPosition, withdrawBTC, agentAddress, fetchCreditScore, fetchBorrowCapacity, fetchMarketRate, generateWithdrawChallenge, verifyWithdrawSignature, consumeWithdrawChallenge } from './tools.js'
+import { withdrawBTC, agentAddress, generateWithdrawChallenge, verifyWithdrawSignature, consumeWithdrawChallenge } from './tools.js'
 import { VAULT_ABI, ERC20_ABI } from '../lib/abis.js'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 const VAULT = process.env.VAULT_ADDRESS as Address
 const USDC  = process.env.USDC_ADDRESS  as Address
+const SKILL_SERVER_URL = process.env.SKILL_SERVER_URL || 'http://localhost:3000'
 
 const SYSTEM_PROMPT = `You are Clawrence — an autonomous credit agent on GOAT Network.
 
@@ -188,11 +189,6 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
 async function executeTool(name: string, input: Record<string, string>): Promise<string> {
   try {
     switch (name) {
-      case 'get_position': {
-        const pos = await getPosition(input.address as Address)
-        return JSON.stringify(pos, null, 2)
-      }
-
       case 'prepare_deposit': {
         const value = parseEther(input.amount)
         const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'deposit', args: [] })
@@ -292,17 +288,57 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         return `Signature verified. Withdrawal executed: ${challenge.amount} BTC. Tx: ${result.hash}`
       }
 
-      case 'skill_credit_score': {
-        const data = await fetchCreditScore(input.address as Address)
-        return JSON.stringify(data, null, 2)
-      }
-      case 'skill_borrow_capacity': {
-        const data = await fetchBorrowCapacity(input.address as Address)
-        return JSON.stringify(data, null, 2)
-      }
+      case 'get_position':
+      case 'skill_credit_score':
+      case 'skill_borrow_capacity':
       case 'skill_market_rate': {
-        const data = await fetchMarketRate()
-        return JSON.stringify(data, null, 2)
+        const pathMap: Record<string, string> = {
+          get_position: `/position?address=${input.address || ''}`,
+          skill_credit_score: `/credit-score?address=${input.address || ''}`,
+          skill_borrow_capacity: `/borrow-capacity?address=${input.address || ''}`,
+          skill_market_rate: '/market-rate',
+        }
+        const descMap: Record<string, string> = {
+          get_position: 'position',
+          skill_credit_score: 'credit score',
+          skill_borrow_capacity: 'borrow capacity',
+          skill_market_rate: 'market rate',
+        }
+        const path = pathMap[name]
+        const fromAddress = input.address || agentAddress()
+
+        // Step 1: Hit skill server — get 402 with payment order
+        const res = await fetch(`${SKILL_SERVER_URL}${path}`, {
+          method: 'GET',
+          headers: { 'X-From-Address': fromAddress },
+        })
+
+        if (res.ok) {
+          // Already paid or no gating — return data directly
+          const data = await res.json()
+          return JSON.stringify(data, null, 2)
+        }
+
+        if (res.status !== 402) {
+          return `Skill server error ${res.status}: ${await res.text()}`
+        }
+
+        // Parse 402 response — x402 payment order
+        const order = await res.json()
+        const skillTx = {
+          type: 'skill_transaction',
+          action: name,
+          description: `Pay $0.10 USDC for ${descMap[name]} data`,
+          // Frontend needs these to complete the x402 flow
+          orderId: order.orderId,
+          payToAddress: order.payToAddress,
+          amountWei: order.amountWei,
+          tokenContract: USDC,
+          chainId: 48816,
+          // Frontend retries this endpoint with X-Order-ID after payment
+          endpoint: `${SKILL_SERVER_URL}${path}`,
+        }
+        return `@@SKILL_TX${JSON.stringify(skillTx)}@@SKILL_TX`
       }
       default:
         return `Unknown tool: ${name}`
@@ -386,10 +422,10 @@ export async function runClawrence(
       const args = JSON.parse(tc.arguments || '{}')
       const result = await executeTool(tc.name, args)
 
-      // If result contains @@TX or @@SIGN, stream it directly to the frontend
-      // so the frontend can detect and act on it immediately
+      // If result contains @@TX, @@SIGN, or @@SKILL_TX, stream it directly to the frontend
       const txMatch = result.match(/@@TX[\s\S]*?@@TX/)
       const signMatch = result.match(/@@SIGN[\s\S]*?@@SIGN/)
+      const skillTxMatch = result.match(/@@SKILL_TX[\s\S]*?@@SKILL_TX/)
       if (txMatch) {
         onChunk?.(txMatch[0])
         fullResponse += txMatch[0]
@@ -398,9 +434,16 @@ export async function runClawrence(
         onChunk?.(signMatch[0])
         fullResponse += signMatch[0]
       }
+      if (skillTxMatch) {
+        onChunk?.(skillTxMatch[0])
+        fullResponse += skillTxMatch[0]
+      }
 
       // Give the LLM a clean version without the markers
-      const cleanResult = result.replace(/@@TX[\s\S]*?@@TX/g, '[transaction data sent to frontend]').replace(/@@SIGN[\s\S]*?@@SIGN/g, '[signing request sent to frontend]')
+      const cleanResult = result
+        .replace(/@@TX[\s\S]*?@@TX/g, '[transaction data sent to frontend]')
+        .replace(/@@SIGN[\s\S]*?@@SIGN/g, '[signing request sent to frontend]')
+        .replace(/@@SKILL_TX[\s\S]*?@@SKILL_TX/g, '[skill payment request sent to frontend — user will pay via MetaMask, then data will be fetched]')
       history.push({
         role: 'tool',
         tool_call_id: tc.id,
