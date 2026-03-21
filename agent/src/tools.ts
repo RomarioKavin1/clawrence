@@ -9,7 +9,7 @@ const PK       = process.env.PRIVATE_KEY   as `0x${string}`
 const EIP712_DOMAIN = {
   name: 'Clawrence',
   version: '1',
-  chainId: 48816,
+  chainId: 11142220,
   verifyingContract: VAULT,
 } as const
 
@@ -82,7 +82,7 @@ export function consumeWithdrawChallenge(address: Address): WithdrawChallenge | 
 
 // ── Write tools (server-side execution) ──────────────────────────────────────
 
-export async function withdrawBTC(amountEther: string) {
+export async function withdrawWETH(amountEther: string) {
   const { client, account } = getWalletClient(PK)
   const amount = parseEther(amountEther)
   const hash = await client.writeContract({
@@ -90,7 +90,7 @@ export async function withdrawBTC(amountEther: string) {
     args: [amount], account, chain: client.chain,
   })
   await publicClient.waitForTransactionReceipt({ hash })
-  return { hash, amount: `${amountEther} BTC` }
+  return { hash, amount: `${amountEther} WETH` }
 }
 
 export function agentAddress(): Address {

@@ -2,7 +2,7 @@
 
 > *"I'm Clawrence. Not the bank. Better."*
 
-**Clawrence is an autonomous AI credit agent on GOAT Network.** Not a DeFi UI. Not a lending dashboard. A character with a voice, a memory, and autonomous decision-making over capital.
+**Clawrence is an autonomous AI credit agent on Celo.** Not a DeFi UI. Not a lending dashboard. A character with a voice, a memory, and autonomous decision-making over capital.
 
 Clawrence talks to users in natural language, evaluates their on-chain reputation, decides how much they can borrow, executes transactions autonomously, and never forgets a debt.
 
@@ -10,17 +10,17 @@ Clawrence talks to users in natural language, evaluates their on-chain reputatio
 
 ## Pitch
 
-**[View the Clawrence Pitch Deck →](https://pitch.com/v/clawrence-23igm7)**
+**[View the Clawrence Pitch Deck](https://pitch.com/v/clawrence-23igm7)**
 
 ---
 
 ## The Problem
 
-AI agents on GOAT Network need USDC to pay for x402 services — data feeds, compute, API calls. Today every agent depends on a human to manually top up its wallet. This is the fundamental bottleneck in agent autonomy.
+AI agents on Celo need USDC to pay for x402 services — data feeds, compute, API calls. Today every agent depends on a human to manually top up its wallet. This is the fundamental bottleneck in agent autonomy.
 
 Agents cannot scale without capital. They cannot get capital without human intervention.
 
-**Clawrence ends that.** He is the credit layer for autonomous agent commerce on GOAT Network.
+**Clawrence ends that.** He is the credit layer for autonomous agent commerce on Celo.
 
 ---
 
@@ -29,20 +29,21 @@ Agents cannot scale without capital. They cannot get capital without human inter
 - Evaluates on-chain reputation via a gaming-resistant credit scoring engine (0–100)
 - Lends USDC against WETH collateral with dynamic LTV tiers based on score
 - Executes deposits, borrows, repayments, and liquidations autonomously
-- Writes every borrower's credit history to the ERC-8004 identity registry — composable across all GOAT protocols
+- Writes every borrower's credit history to the ERC-8004 identity registry — composable across all Celo protocols
 - Monetizes its own data endpoints via x402 micropayments (the same USDC it lends)
 
 ---
 
-## Deployed Contracts — GOAT Testnet3
+## Deployed Contracts — Celo Sepolia
 
 | Contract | Address | Explorer |
 |---|---|---|
-| ClawrenceVault | `0x9cBF61D82adf61417cD2e513629fD8aABAD85B32` | [View ↗](https://explorer.testnet3.goat.network/address/0x9cBF61D82adf61417cD2e513629fD8aABAD85B32) |
-| CreditScore | `0x65617c310059961f68916Cb592Aa9cec3B404863` | [View ↗](https://explorer.testnet3.goat.network/address/0x65617c310059961f68916Cb592Aa9cec3B404863) |
-| USDC | `0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1` | [View ↗](https://explorer.testnet3.goat.network/address/0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1) |
-| DIA Oracle | `0xef094fff94a7954ba3e5ed81dbafe7350e7e9720` | [View ↗](https://explorer.testnet3.goat.network/address/0xef094fff94a7954ba3e5ed81dbafe7350e7e9720) |
-| ERC-8004 Registry | `0x556089008Fc0a60cD09390Eca93477ca254A5522` | [View ↗](https://explorer.testnet3.goat.network/address/0x556089008Fc0a60cD09390Eca93477ca254A5522) |
+| ClawrenceVault | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
+| CreditScore | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
+| USDC | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
+| Price Feed | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
+| ERC-8004 Identity Registry | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | [View](https://celo-sepolia.celoscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) |
+| ERC-8004 Reputation Registry | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | [View](https://celo-sepolia.celoscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) |
 
 ---
 
@@ -50,14 +51,11 @@ Agents cannot scale without capital. They cannot get capital without human inter
 
 | Detail | Value |
 |---|---|
-| Network | GOAT Testnet3 |
-| Chain ID | 48816 |
-| RPC | `https://rpc.testnet3.goat.network` |
-| Explorer | `https://explorer.testnet3.goat.network` |
-| Faucet | `https://bridge.testnet3.goat.network/faucet` |
-| USDC | `0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1` |
-| USDT | `0xdce0af57e8f2ce957b3838cd2a2f3f3677965dd3` |
-| Native Gas | BTC (wrapped) |
+| Network | Celo Sepolia |
+| Chain ID | 11142220 |
+| RPC | `https://forno.celo-sepolia.celo-testnet.org` |
+| Explorer | `https://celo-sepolia.celoscan.io` |
+| Native Gas | CELO |
 
 ---
 
@@ -65,16 +63,16 @@ Agents cannot scale without capital. They cannot get capital without human inter
 
 ```
 User
-  │
-  ▼
+  |
+  v
 Clawrence Agent (OpenClaw)
-  │   Natural language interface
-  │
-  ├──▶ ClawrenceVault.sol       Core lending vault — deposit, borrow, repay, liquidate
-  ├──▶ CreditScore.sol          Weighted on-chain scoring engine (0–100)
-  ├──▶ DIA Oracle               Live ETH/USD price feed, circuit breaker if stale >1 hour
-  ├──▶ ERC-8004 Registry        Agent identity — composable credit history on GOAT
-  └──▶ x402 Skill Server        3 paywalled endpoints at $0.01 USDC each
+  |   Natural language interface
+  |
+  |---> ClawrenceVault.sol       Core lending vault — deposit, borrow, repay, liquidate
+  |---> CreditScore.sol          Weighted on-chain scoring engine (0–100)
+  |---> Price Feed               ETH/USD via Bybit WS, owner-pushed on-chain
+  |---> ERC-8004 Registry        Agent identity — composable credit history on Celo
+  `---> x402 Skill Server        3 paywalled endpoints at $0.01 USDC each
 ```
 
 ---
@@ -87,13 +85,13 @@ Core lending vault. Pre-funded with test USDC by the deployer.
 
 | Function | Description |
 |---|---|
-| `deposit(uint256 amount)` | Accepts WETH, records collateral balance |
-| `borrow(uint256 amount)` | Score >30 required, health factor ≥1.2 post-borrow, 6-hour cooldown |
+| `deposit(uint256 amount)` | Accepts WETH (ERC-20 transferFrom), records collateral balance |
+| `borrow(uint256 amount)` | Score >30 required, health factor >=1.2 post-borrow, 6-hour cooldown |
 | `repay(uint256 amount)` | Min 1-hour hold required, triggers score update on repayment |
 | `liquidate(address agent)` | Anyone can call if health factor <1.0, seizes collateral, penalizes score |
 | `getHealthFactor(address)` | Returns `collateralValueUSD * 100 / debt` — below 100 = undercollateralized |
 | `getMaxBorrow(address)` | Returns `collateralValueUSD * LTV / 100` based on score tier |
-| `getCollateralValueUSD(address)` | Live collateral value via DIA oracle |
+| `getCollateralValueUSD(address)` | Live collateral value via price feed |
 
 ### CreditScore.sol
 
@@ -142,14 +140,14 @@ Streak bonuses: +5 at 3 consecutive repayments, +10 at 5
 
 ---
 
-## Oracle Integration (DIA)
+## Price Feed Integration
 
-Live ETH/USD price feeds on GOAT Testnet3. Circuit breaker rejects stale prices older than 1 hour.
+Owner-pushed ETH/USD price feed via Bybit WebSocket. Circuit breaker rejects stale prices older than 1 hour.
 
 ```solidity
-interface IDIAOracle {
-    function getValue(string memory key)
-        external view returns (uint128 price, uint128 timestamp);
+interface IClawrencePriceFeed {
+    function getETHUSDPrice() external view returns (uint256 price);
+    function pushPrice(uint256 price) external; // onlyOwner
 }
 ```
 
@@ -173,7 +171,7 @@ After every score update, the borrower's credit profile is written to the regist
 }
 ```
 
-This makes Clawrence credit scores **composable** — any protocol on GOAT can query a wallet's Clawrence reputation. Clawrence becomes credit infrastructure for the ecosystem, not just a lending app.
+This makes Clawrence credit scores **composable** — any protocol on Celo can query a wallet's Clawrence reputation. Clawrence becomes credit infrastructure for the ecosystem, not just a lending app.
 
 ---
 
@@ -187,7 +185,7 @@ Three paywalled data endpoints, each costing $0.01 USDC.
 | `GET /borrow-capacity?address=0x...` | Collateral value, max borrow, current debt, health factor |
 | `GET /market-rate` | Total deposited, total borrowed, utilization %, implied APR |
 
-**Stack:** TypeScript · Express · goatx402-sdk-server · Viem · Railway
+**Stack:** TypeScript, Express, thirdweb x402 middleware, Viem, Railway
 
 **Self-referential design:** The skill server requires x402 USDC payments — the same USDC Clawrence lends. Agents borrow from Clawrence to pay Clawrence's own endpoints. Closed autonomous loop.
 
@@ -200,16 +198,16 @@ Three paywalled data endpoints, each costing $0.01 USDC.
 **Supported commands:**
 
 ```
-"What's my credit score?"       → score, tier, LTV, streak
-"How much can I borrow?"        → max borrow via DIA oracle
-"Deposit [amount] WETH"         → executes deposit()
-"Borrow [amount] USDC"          → validates + executes borrow()
-"Repay my loan"                 → executes repay(), shows updated score
-"Check my health factor"        → warns if approaching liquidation
-"Pay for market rate"           → hits x402 endpoint, pays $0.01 USDC
-"Show me the leaderboard"       → top scores from CreditScore.sol
-"What happens if I default?"    → explains -40 penalty and recovery path
-"How do I improve my score?"    → utilization, duration, streak, decay explanation
+"What's my credit score?"       -> score, tier, LTV, streak
+"How much can I borrow?"        -> max borrow via price feed
+"Deposit [amount] WETH"         -> executes approve + deposit()
+"Borrow [amount] USDC"          -> validates + executes borrow()
+"Repay my loan"                 -> executes repay(), shows updated score
+"Check my health factor"        -> warns if approaching liquidation
+"Pay for market rate"           -> hits x402 endpoint, pays $0.01 USDC
+"Show me the leaderboard"       -> top scores from CreditScore.sol
+"What happens if I default?"    -> explains -40 penalty and recovery path
+"How do I improve my score?"    -> utilization, duration, streak, decay explanation
 ```
 
 *"— Clawrence"*
@@ -218,7 +216,7 @@ Three paywalled data endpoints, each costing $0.01 USDC.
 
 ## Frontend
 
-**Stack:** Next.js 14 App Router · Tailwind CSS · wagmi v2 · viem · RainbowKit · Vercel
+**Stack:** Next.js 14 App Router, Tailwind CSS, wagmi v2, viem, RainbowKit, Vercel
 
 **Pages:**
 
@@ -233,12 +231,12 @@ Three paywalled data endpoints, each costing $0.01 USDC.
 
 | Score | Badge |
 |---|---|
-| 95–100 | ⭐ Elite |
-| 85–95 | 🔷 Veteran |
-| 70–85 | ✓ Trusted |
+| 95–100 | Elite |
+| 85–95 | Veteran |
+| 70–85 | Trusted |
 | 50–70 | Basic |
 | 30–50 | New |
-| 0–30 | ⚠️ Blocked |
+| 0–30 | Blocked |
 
 ---
 
@@ -263,7 +261,7 @@ clawrence/
 cd contracts
 forge install
 forge test -vvv
-forge script script/Deploy.s.sol --rpc-url goat --broadcast --verify
+forge script script/Deploy.s.sol --rpc-url celo --broadcast --verify
 ```
 
 ### Skill Server
@@ -291,57 +289,56 @@ npm run dev
 ### Contracts
 ```
 PRIVATE_KEY=
-GOAT_RPC=https://rpc.testnet3.goat.network
-DIA_ORACLE_ADDRESS=0xef094fff94a7954ba3e5ed81dbafe7350e7e9720
-ERC8004_REGISTRY=0x556089008Fc0a60cD09390Eca93477ca254A5522
-VAULT_ADDRESS=0x9cBF61D82adf61417cD2e513629fD8aABAD85B32
-CREDIT_SCORE_ADDRESS=0x65617c310059961f68916Cb592Aa9cec3B404863
-USDC_ADDRESS=0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1
+CELO_RPC=https://forno.celo-sepolia.celo-testnet.org
+IDENTITY_REGISTRY=0x8004A818BFB912233c491871b3d84c89A494BD9e
+REPUTATION_REGISTRY=0x8004B663056A597Dffe9eCcC1965A193B7388713
 ```
 
 ### Skill Server
 ```
-GOATX402_API_URL=https://x402-api-lx58aabp0r.testnet3.goat.network
-GOATX402_MERCHANT_ID=clawrence
-GOATX402_API_KEY=
-GOATX402_API_SECRET=
-VAULT_ADDRESS=0x9cBF61D82adf61417cD2e513629fD8aABAD85B32
-CREDIT_SCORE_ADDRESS=0x65617c310059961f68916Cb592Aa9cec3B404863
-USDC_ADDRESS=0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1
-GOAT_RPC=https://rpc.testnet3.goat.network
+THIRDWEB_CLIENT_ID=
+THIRDWEB_SECRET_KEY=
+VAULT_ADDRESS=
+CREDIT_SCORE_ADDRESS=
+CELO_RPC=https://forno.celo-sepolia.celo-testnet.org
+USDC_ADDRESS=
+WETH_ADDRESS=
+RECEIVER_ADDRESS=
+PORT=3001
 ```
 
 ### Frontend
 ```
-NEXT_PUBLIC_VAULT_ADDRESS=0x9cBF61D82adf61417cD2e513629fD8aABAD85B32
-NEXT_PUBLIC_CREDIT_SCORE_ADDRESS=0x65617c310059961f68916Cb592Aa9cec3B404863
-NEXT_PUBLIC_CHAIN_ID=48816
+NEXT_PUBLIC_VAULT_ADDRESS=
+NEXT_PUBLIC_CREDIT_SCORE_ADDRESS=
+NEXT_PUBLIC_CHAIN_ID=11142220
 NEXT_PUBLIC_SKILL_SERVER_URL=http://localhost:3000
+NEXT_PUBLIC_USDC_ADDRESS=
+NEXT_PUBLIC_WETH_ADDRESS=
 ```
 
 ---
 
 ## Deployment Order
 
-1. DM `@goathackbot` — receive `.env` credentials, test USDC, ERC-8004 agentId for Clawrence
-2. Get BTC gas from the faucet: `https://bridge.testnet3.goat.network/faucet`
-3. Deploy `ClawrenceVault.sol` and `CreditScore.sol` on GOAT Testnet3
-4. Pre-fund `ClawrenceVault` with test USDC from goathackbot funds
-5. Verify both contracts on the explorer
-6. Find DIA oracle address on explorer, set in vault config
-7. Deploy skill server to Railway, set env vars, confirm 402 responses
-8. Deploy frontend to Vercel, set env vars, test wallet connection on chain 48816
-9. Configure OpenClaw with Clawrence personality prompt and vault skills
+1. Get CELO testnet gas from the Celo Sepolia faucet
+2. Deploy `ClawrenceVault.sol` and `CreditScore.sol` on Celo Sepolia
+3. Pre-fund `ClawrenceVault` with test USDC
+4. Verify both contracts on Celoscan
+5. Deploy price feed contract, start Bybit WS price pusher
+6. Deploy skill server to Railway, set env vars, confirm 402 responses
+7. Deploy frontend to Vercel, set env vars, test wallet connection on chain 11142220
+8. Configure OpenClaw with Clawrence personality prompt and vault skills
+9. Register Clawrence identity on ERC-8004 Identity Registry
 10. Update Clawrence ERC-8004 metadata URI on registry
 
 ---
 
 ## Built With
 
-- [GOAT Network](https://goat.network) — L2 on Bitcoin
-- [DIA Oracle](https://diadata.org) — live price feeds on GOAT Testnet3
+- [Celo](https://celo.org) — EVM-compatible L1
 - [ERC-8004](https://github.com/goat-sdk/erc-8004) — agent identity standard
-- [goatx402-sdk-server](https://github.com/goat-sdk/goatx402) — x402 payment middleware
+- [thirdweb](https://thirdweb.com) — x402 payment middleware
 - [OpenZeppelin Contracts](https://openzeppelin.com/contracts)
 - [Foundry](https://getfoundry.sh)
 - [wagmi](https://wagmi.sh) + [RainbowKit](https://rainbowkit.com)

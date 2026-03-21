@@ -1,7 +1,7 @@
 import { createPublicClient, http } from 'viem'
-import { goatTestnet3 } from './chain'
+import { celoSepolia } from './chain'
 
 export const publicClient = createPublicClient({
-  chain: goatTestnet3,
+  chain: celoSepolia,
   transport: http(),
 })

@@ -8,16 +8,16 @@ import {CreditScore} from "../src/CreditScore.sol";
 contract Deploy is Script {
     function run() external {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
-        address diaOracle   = vm.envAddress("DIA_ORACLE_ADDRESS");
-        address erc8004     = vm.envAddress("ERC8004_REGISTRY");
-        address usdc        = vm.envAddress("USDC_ADDRESS");
+        address reputationRegistry = vm.envAddress("REPUTATION_REGISTRY");
+        address usdc = vm.envAddress("USDC_ADDRESS");
+        address weth = vm.envAddress("WETH_ADDRESS");
 
         vm.startBroadcast(deployerKey);
 
-        CreditScore cs = new CreditScore(erc8004);
+        CreditScore cs = new CreditScore(reputationRegistry);
         console.log("CreditScore deployed at:", address(cs));
 
-        ClawrenceVault vault = new ClawrenceVault(usdc, diaOracle, address(cs));
+        ClawrenceVault vault = new ClawrenceVault(usdc, weth, address(cs));
         console.log("ClawrenceVault deployed at:", address(vault));
 
         cs.setVault(address(vault));

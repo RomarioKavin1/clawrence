@@ -40,7 +40,7 @@ export function IdentityCard({ isClawrence, agentId }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {[
             { label: 'Agent ID', value: agentId != null ? String(agentId) : 'Pending registration' },
-            { label: 'Network', value: 'GOAT Testnet3' },
+            { label: 'Network', value: 'Celo Sepolia' },
             { label: 'Services', value: 'credit-score, borrow-capacity, market-rate' },
             { label: 'Price', value: '$0.01 USDC per call' },
           ].map(row => (
@@ -89,7 +89,7 @@ export function IdentityCard({ isClawrence, agentId }: Props) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {[
           { label: 'Credit Score', value: String(score ?? 50n), highlight: true },
-          { label: 'Network', value: 'GOAT Testnet3', highlight: false },
+          { label: 'Network', value: 'Celo Sepolia', highlight: false },
           { label: 'ERC-8004 Agent ID', value: agentId != null ? `#${agentId}` : 'Not registered', highlight: false },
         ].map(row => (
           <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>

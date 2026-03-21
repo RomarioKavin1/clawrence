@@ -5,15 +5,17 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IDIAOracle} from "./interfaces/IDIAOracle.sol";
 import {ICreditScore} from "./interfaces/ICreditScore.sol";
 
 contract ClawrenceVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable usdc;
-    IDIAOracle public immutable diaOracle;
+    IERC20 public immutable weth;
     ICreditScore public immutable creditScore;
+
+    uint256 public ethUsdPrice;
+    uint256 public priceTimestamp;
 
     mapping(address => uint256) public collateral;
     mapping(address => uint256) public debt;
@@ -33,6 +35,7 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
     event Borrowed(address indexed recipient, uint256 amount, uint256 healthFactor);
     event Repaid(address indexed agent, uint256 amount, uint256 newScore);
     event Liquidated(address indexed agent, address indexed liquidator, uint256 collateralSeized);
+    event PriceUpdated(uint256 price, uint256 timestamp);
 
     error ScoreTooLow(uint256 score);
     error ExceedsMaxBorrow(uint256 requested, uint256 max);
@@ -44,20 +47,26 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
     error StaleOracle();
     error ZeroAmount();
 
-    constructor(address _usdc, address _diaOracle, address _creditScore) Ownable(msg.sender) {
+    constructor(address _usdc, address _weth, address _creditScore) Ownable(msg.sender) {
         usdc = IERC20(_usdc);
-        diaOracle = IDIAOracle(_diaOracle);
+        weth = IERC20(_weth);
         creditScore = ICreditScore(_creditScore);
     }
 
-    /// @notice Anyone can deposit native BTC as collateral for their own address.
-    function deposit() external payable nonReentrant {
-        if (msg.value == 0) revert ZeroAmount();
-        collateral[msg.sender] += msg.value;
-        emit Deposited(msg.sender, msg.value);
+    function setPrice(uint256 _price, uint256 _timestamp) external onlyOwner {
+        require(_price > 0, "Invalid price");
+        ethUsdPrice = _price;
+        priceTimestamp = _timestamp;
+        emit PriceUpdated(_price, _timestamp);
     }
 
-    /// @notice Anyone can withdraw their own collateral.
+    function deposit(uint256 amount) external nonReentrant {
+        if (amount == 0) revert ZeroAmount();
+        weth.safeTransferFrom(msg.sender, address(this), amount);
+        collateral[msg.sender] += amount;
+        emit Deposited(msg.sender, amount);
+    }
+
     function withdraw(uint256 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
         require(collateral[msg.sender] >= amount, "Insufficient collateral");
@@ -66,14 +75,10 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
             uint256 hf = getHealthFactor(msg.sender);
             if (hf < HEALTH_FACTOR_MIN) revert HealthFactorTooLow(hf);
         }
-        (bool ok,) = msg.sender.call{value: amount}("");
-        require(ok, "BTC transfer failed");
+        weth.safeTransfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount);
     }
 
-    /// @notice Only Clawrence (owner) can execute borrows.
-    /// Debt is recorded against `recipient`; USDC is sent to `recipient`.
-    /// Clawrence verifies ownership off-chain via signature before calling this.
     function borrow(address recipient, uint256 amount) external onlyOwner nonReentrant {
         if (amount == 0) revert ZeroAmount();
         uint256 s = creditScore.getScore(recipient);
@@ -92,8 +97,6 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Borrowed(recipient, amount, hf);
     }
 
-    /// @notice Anyone can repay debt on behalf of any address.
-    /// msg.sender provides the USDC; debt is reduced for `onBehalfOf`.
     function repay(address onBehalfOf, uint256 amount) external nonReentrant {
         if (debt[onBehalfOf] == 0) revert NoDebt();
         if (amount == 0) revert ZeroAmount();
@@ -110,7 +113,6 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Repaid(onBehalfOf, actualRepay, newScore);
     }
 
-    /// @notice Liquidate an undercollateralized position. Open to anyone.
     function liquidate(address agent) external nonReentrant {
         if (debt[agent] == 0) revert NoDebt();
         uint256 hf = getHealthFactor(agent);
@@ -120,8 +122,7 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         debt[agent] = 0;
         loanTimestamp[agent] = 0;
         creditScore.penalizeDefault(agent);
-        (bool ok,) = msg.sender.call{value: seizedCollateral}("");
-        require(ok, "BTC transfer failed");
+        weth.safeTransfer(msg.sender, seizedCollateral);
         emit Liquidated(agent, msg.sender, seizedCollateral);
     }
 
@@ -134,16 +135,15 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         uint256 ltv = creditScore.getLTV(agent);
         if (ltv == 0) return 0;
         uint256 collatValueUSD = getCollateralValueUSD(agent);
-        uint256 maxBorrow = collatValueUSD * ltv / 100;
-        if (debt[agent] >= maxBorrow) return 0;
-        return maxBorrow - debt[agent];
+        uint256 maxB = collatValueUSD * ltv / 100;
+        if (debt[agent] >= maxB) return 0;
+        return maxB - debt[agent];
     }
 
     function getCollateralValueUSD(address agent) public view returns (uint256) {
-        uint256 btcAmount = collateral[agent];
-        if (btcAmount == 0) return 0;
-        (uint128 price, uint128 ts) = diaOracle.getValue("BTC/USD");
-        if (block.timestamp - ts > 1 hours) revert StaleOracle();
-        return btcAmount * uint256(price) / 1e20;
+        uint256 ethAmount = collateral[agent];
+        if (ethAmount == 0) return 0;
+        if (block.timestamp - priceTimestamp > 1 hours) revert StaleOracle();
+        return ethAmount * ethUsdPrice / 1e20;
     }
 }

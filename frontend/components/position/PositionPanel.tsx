@@ -10,14 +10,14 @@ export function PositionPanel() {
 
   const { data, isLoading } = useReadContracts({
     contracts: address ? [
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'collateral',            args: [address], chainId: 48816 },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'debt',                  args: [address], chainId: 48816 },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getHealthFactor',        args: [address], chainId: 48816 },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getMaxBorrow',           args: [address], chainId: 48816 },
-      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getCollateralValueUSD',  args: [address], chainId: 48816 },
-      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getScore',              args: [address], chainId: 48816 },
-      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getLTV',                args: [address], chainId: 48816 },
-      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [address], chainId: 48816 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'collateral',            args: [address], chainId: 11142220 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'debt',                  args: [address], chainId: 11142220 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getHealthFactor',        args: [address], chainId: 11142220 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getMaxBorrow',           args: [address], chainId: 11142220 },
+      { address: VAULT_ADDRESS,        abi: VAULT_ABI,        functionName: 'getCollateralValueUSD',  args: [address], chainId: 11142220 },
+      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getScore',              args: [address], chainId: 11142220 },
+      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'getLTV',                args: [address], chainId: 11142220 },
+      { address: CREDIT_SCORE_ADDRESS, abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [address], chainId: 11142220 },
     ] : [],
     query: { refetchInterval: 15_000 },
   })
@@ -92,7 +92,7 @@ export function PositionPanel() {
           <ScoreBadge score={Number(score)} />
         </StatBox>
         <StatBox label="LTV Tier" value={`${ltv}%`} />
-        <StatBox label="Collateral" value={`${safeFormat(collateral, 18, 6)} BTC`} />
+        <StatBox label="Collateral" value={`${safeFormat(collateral, 18, 6)} WETH`} />
         <StatBox label="Collateral USD" value={`$${safeFormat(collatUSD, 6, 2)}`} />
         <StatBox label="Debt" value={`${safeFormat(debt, 6, 2)} USDC`} />
         <StatBox label="Max Borrow" value={`${safeFormat(maxBorrow, 6, 2)} USDC`} />

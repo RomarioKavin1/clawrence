@@ -420,7 +420,7 @@ export function ClawrenceChat() {
         <input
           className="input-field"
           style={{ flex: 1 }}
-          placeholder={isConnected ? "What's my credit score? / Deposit 0.01 BTC / …" : "Connect your wallet first"}
+          placeholder={isConnected ? "What's my credit score? / Deposit 0.01 WETH / …" : "Connect your wallet first"}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}

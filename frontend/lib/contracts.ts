@@ -1,6 +1,7 @@
 export const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`
 export const CREDIT_SCORE_ADDRESS = (process.env.NEXT_PUBLIC_CREDIT_SCORE_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`
-export const USDC_ADDRESS = '0x29d1ee93e9ecf6e50f309f498e40a6b42d352fa1' as const
+export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`
+export const WETH_ADDRESS = (process.env.NEXT_PUBLIC_WETH_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`
 
 export const VAULT_ABI = [
   { name: 'getHealthFactor',       type: 'function', stateMutability: 'view',        inputs: [{ name: 'agent', type: 'address' }], outputs: [{ type: 'uint256' }] },
@@ -8,7 +9,7 @@ export const VAULT_ABI = [
   { name: 'getCollateralValueUSD', type: 'function', stateMutability: 'view',        inputs: [{ name: 'agent', type: 'address' }], outputs: [{ type: 'uint256' }] },
   { name: 'collateral',            type: 'function', stateMutability: 'view',        inputs: [{ name: '', type: 'address' }],      outputs: [{ type: 'uint256' }] },
   { name: 'debt',                  type: 'function', stateMutability: 'view',        inputs: [{ name: '', type: 'address' }],      outputs: [{ type: 'uint256' }] },
-  { name: 'deposit',               type: 'function', stateMutability: 'payable',     inputs: [],                                                                                outputs: [] },
+  { name: 'deposit',               type: 'function', stateMutability: 'nonpayable',  inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
   { name: 'borrow',                type: 'function', stateMutability: 'nonpayable',  inputs: [{ name: 'recipient', type: 'address' }, { name: 'amount', type: 'uint256' }],  outputs: [] },
   { name: 'repay',                 type: 'function', stateMutability: 'nonpayable',  inputs: [{ name: 'onBehalfOf', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [] },
   { name: 'withdraw',              type: 'function', stateMutability: 'nonpayable',  inputs: [{ name: 'amount', type: 'uint256' }],                                           outputs: [] },

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi'
 import { parseUnits, parseEther } from 'viem'
-import { VAULT_ADDRESS, VAULT_ABI } from '@/lib/contracts'
+import { VAULT_ADDRESS, VAULT_ABI, WETH_ADDRESS, ERC20_ABI } from '@/lib/contracts'
 
 type Action = 'deposit' | 'borrow' | 'repay' | 'withdraw'
 
@@ -11,6 +11,7 @@ export function VaultActions() {
   const { address } = useAccount()
   const [action, setAction] = useState<Action>('deposit')
   const [amount, setAmount] = useState('')
+  const [depositStep, setDepositStep] = useState<'approve' | 'deposit'>('approve')
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
@@ -20,7 +21,7 @@ export function VaultActions() {
     abi: VAULT_ABI,
     functionName: 'getMaxBorrow',
     args: address ? [address] : undefined,
-    chainId: 48816,
+    chainId: 11142220,
     query: { enabled: !!address },
   })
 
@@ -31,7 +32,13 @@ export function VaultActions() {
       : parseUnits(amount, 6)
 
     if (action === 'deposit') {
-      writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'deposit', args: [], value: parsedAmount })
+      if (depositStep === 'approve') {
+        writeContract({ address: WETH_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [VAULT_ADDRESS, parsedAmount] })
+        setDepositStep('deposit')
+      } else {
+        writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'deposit', args: [parsedAmount] })
+        setDepositStep('approve')
+      }
     } else if (action === 'borrow') {
       writeContract({ address: VAULT_ADDRESS, abi: VAULT_ABI, functionName: 'borrow', args: [address, parsedAmount] })
     } else if (action === 'repay') {
@@ -45,13 +52,11 @@ export function VaultActions() {
 
   return (
     <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.25rem', padding: '0.25rem', background: 'var(--card-2)', borderRadius: '0.75rem' }}>
         {tabs.map(t => (
           <button
             key={t}
-            onClick={() => { setAction(t); setAmount('') }}
+            onClick={() => { setAction(t); setAmount(''); setDepositStep('approve') }}
             style={{
               flex: 1, padding: '0.5rem',
               fontFamily: 'Inter, sans-serif', fontWeight: 600,
@@ -67,10 +72,9 @@ export function VaultActions() {
         ))}
       </div>
 
-      {/* Amount */}
       <div>
         <label style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
-          Amount ({action === 'deposit' || action === 'withdraw' ? 'BTC' : 'USDC'})
+          Amount ({action === 'deposit' || action === 'withdraw' ? 'WETH' : 'USDC'})
         </label>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <input
@@ -101,14 +105,15 @@ export function VaultActions() {
         )}
       </div>
 
-      {/* Submit */}
       <button
         onClick={execute}
         disabled={isPending || isConfirming || !amount}
         className="btn-primary"
         style={{ width: '100%', padding: '0.875rem' }}
       >
-        {isPending ? 'Confirm in wallet…' : isConfirming ? 'Confirming…' : action.charAt(0).toUpperCase() + action.slice(1)}
+        {isPending ? 'Confirm in wallet…' : isConfirming ? 'Confirming…'
+          : action === 'deposit' && depositStep === 'approve' ? 'Approve WETH'
+          : action.charAt(0).toUpperCase() + action.slice(1)}
       </button>
 
       {isSuccess && (

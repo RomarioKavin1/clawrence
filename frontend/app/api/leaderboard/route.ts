@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createPublicClient, http, formatUnits } from 'viem'
-import { goatTestnet3 } from '@/lib/chains'
+import { celoSepolia } from '@/lib/chains'
 import { VAULT_ADDRESS, CREDIT_SCORE_ADDRESS, CREDIT_SCORE_ABI } from '@/lib/contracts'
 
 const client = createPublicClient({
-  chain: goatTestnet3,
+  chain: celoSepolia,
   transport: http(),
 })
 
 // Deployment block — don't scan from 0 on a chain at block 12M
-const DEPLOY_BLOCK = 12019598n
+const DEPLOY_BLOCK = 0n
 
 const DEPOSITED_EVENT = {
   name: 'Deposited',

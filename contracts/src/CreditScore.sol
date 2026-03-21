@@ -2,11 +2,11 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC8004} from "./interfaces/IERC8004.sol";
+import {IReputationRegistry} from "./interfaces/IReputationRegistry.sol";
 
 contract CreditScore is Ownable {
     address public vault;
-    IERC8004 public erc8004Registry;
+    IReputationRegistry public reputationRegistry;
 
     mapping(address => uint256) public score;
     mapping(address => uint256) public totalLoans;
@@ -32,9 +32,9 @@ contract CreditScore is Ownable {
     error OnlyVault();
     error ZeroAddress();
 
-    constructor(address _erc8004Registry) Ownable(msg.sender) {
-        if (_erc8004Registry == address(0)) revert ZeroAddress();
-        erc8004Registry = IERC8004(_erc8004Registry);
+    constructor(address _reputationRegistry) Ownable(msg.sender) {
+        if (_reputationRegistry == address(0)) revert ZeroAddress();
+        reputationRegistry = IReputationRegistry(_reputationRegistry);
     }
 
     function setVault(address _vault) external onlyOwner {
@@ -57,19 +57,10 @@ contract CreditScore is Ownable {
         return _scoreTier(_computeDecayedScore(agent));
     }
 
-    function updateScore(
-        address agent,
-        uint256 loanAmount,
-        uint256 maxBorrowAtTime,
-        uint256 loanDuration,
-        bool repaidOnTime
-    ) external {
+    function updateScore(address agent, uint256 loanAmount, uint256 maxBorrowAtTime, uint256 loanDuration, bool repaidOnTime) external {
         if (msg.sender != vault) revert OnlyVault();
         _applyDecay(agent);
-        if (!hasHistory[agent]) {
-            score[agent] = INITIAL_SCORE;
-            hasHistory[agent] = true;
-        }
+        if (!hasHistory[agent]) { score[agent] = INITIAL_SCORE; hasHistory[agent] = true; }
         if (repaidOnTime) {
             uint256 gain = _computeGain(agent, loanAmount, maxBorrowAtTime, loanDuration);
             score[agent] = _clamp(score[agent] + gain, MIN_SCORE, MAX_SCORE);
@@ -87,10 +78,7 @@ contract CreditScore is Ownable {
 
     function penalizeDefault(address agent) external {
         if (msg.sender != vault) revert OnlyVault();
-        if (!hasHistory[agent]) {
-            score[agent] = INITIAL_SCORE;
-            hasHistory[agent] = true;
-        }
+        if (!hasHistory[agent]) { score[agent] = INITIAL_SCORE; hasHistory[agent] = true; }
         _applyDecay(agent);
         score[agent] = _saturatingSub(score[agent], PENALTY_DEFAULT);
         consecutiveRepayments[agent] = 0;
@@ -99,28 +87,24 @@ contract CreditScore is Ownable {
         _writeToERC8004(agent);
     }
 
-    function _computeGain(address agent, uint256 loanAmount, uint256 maxBorrowAtTime, uint256 loanDuration)
-        internal view returns (uint256 gain)
-    {
+    function _computeGain(address agent, uint256 loanAmount, uint256 maxBorrowAtTime, uint256 loanDuration) internal view returns (uint256 gain) {
         if (maxBorrowAtTime == 0) return 2;
         uint256 utilization = loanAmount * 100 / maxBorrowAtTime;
-        if (utilization < 10)      gain = 2;
+        if (utilization < 10) gain = 2;
         else if (utilization < 50) gain = 5;
         else if (utilization < 80) gain = 10;
-        else                       gain = 15;
-
-        if (loanDuration > 72 hours)      gain += 5;
+        else gain = 15;
+        if (loanDuration > 72 hours) gain += 5;
         else if (loanDuration > 24 hours) gain += 3;
-
         uint256 streak = consecutiveRepayments[agent] + 1;
-        if (streak == 5)      gain += 10;
+        if (streak == 5) gain += 10;
         else if (streak == 3) gain += 5;
     }
 
     function _applyDecay(address agent) internal {
         if (!hasHistory[agent]) return;
         uint256 inactiveFor = block.timestamp - lastActivityTimestamp[agent];
-        if (inactiveFor > 30 days)     score[agent] = _saturatingSub(score[agent], DECAY_30D);
+        if (inactiveFor > 30 days) score[agent] = _saturatingSub(score[agent], DECAY_30D);
         else if (inactiveFor > 7 days) score[agent] = _saturatingSub(score[agent], DECAY_7D);
     }
 
@@ -128,8 +112,8 @@ contract CreditScore is Ownable {
         if (!hasHistory[agent]) return INITIAL_SCORE;
         uint256 s = score[agent];
         uint256 inactiveFor = block.timestamp - lastActivityTimestamp[agent];
-        if (inactiveFor > 30 days)     return _saturatingSub(s, DECAY_30D);
-        if (inactiveFor > 7 days)      return _saturatingSub(s, DECAY_7D);
+        if (inactiveFor > 30 days) return _saturatingSub(s, DECAY_30D);
+        if (inactiveFor > 7 days) return _saturatingSub(s, DECAY_7D);
         return s;
     }
 
@@ -142,16 +126,22 @@ contract CreditScore is Ownable {
         return 100;
     }
 
+    function _getTierName(uint256 s) internal pure returns (string memory) {
+        if (s >= 95) return "Elite";
+        if (s >= 85) return "Veteran";
+        if (s >= 70) return "Trusted";
+        if (s >= 50) return "Basic";
+        if (s >= 30) return "New";
+        return "Blocked";
+    }
+
     function _writeToERC8004(address agent) internal {
         uint256 id = agentId[agent];
         if (id == 0) return;
-        string memory uri = string(abi.encodePacked(
-            '{"clawrenceScore":', _uint2str(score[agent]),
-            ',"totalLoans":', _uint2str(totalLoans[agent]),
-            ',"consecutiveRepayments":', _uint2str(consecutiveRepayments[agent]),
-            '}'
-        ));
-        try erc8004Registry.setAgentURI(id, uri) {} catch {}
+        string memory tier = _getTierName(score[agent]);
+        try reputationRegistry.giveFeedback(
+            id, int128(int256(score[agent])), 0, "clawrenceScore", tier, "", "", bytes32(0)
+        ) {} catch {}
     }
 
     function _clamp(uint256 val, uint256 lo, uint256 hi) internal pure returns (uint256) {
