@@ -60,6 +60,9 @@ export function VaultActions() {
       })
       await publicClient.waitForTransactionReceipt({ hash: approveTx })
 
+      // Wait for nonce to propagate to sequencer
+      await new Promise(r => setTimeout(r, 3000))
+
       // Step 3: Transfer WETH to server wallet
       setDepositStep('transfer')
       setDepositStatus('Transfer WETH in wallet...')
@@ -74,6 +77,9 @@ export function VaultActions() {
         args: [payTo, parsedAmount],
       })
       await publicClient.waitForTransactionReceipt({ hash: transferTx })
+
+      // Wait for nonce to propagate before server sends its tx
+      await new Promise(r => setTimeout(r, 3000))
 
       // Step 4: Confirm deposit with server
       setDepositStep('confirming')

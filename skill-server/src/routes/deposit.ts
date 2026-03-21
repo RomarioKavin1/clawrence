@@ -123,6 +123,9 @@ router.post('/', async (req: Request, res: Response) => {
     })
     await publicClient.waitForTransactionReceipt({ hash: approveTx })
 
+    // Wait for nonce to propagate to sequencer
+    await new Promise(r => setTimeout(r, 3000))
+
     // Call depositFor
     const depositTx = await walletClient.writeContract({
       address: VAULT_ADDRESS,

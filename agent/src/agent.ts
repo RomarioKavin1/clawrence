@@ -79,13 +79,14 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'prepare_deposit',
-      description: 'Prepare a deposit transaction to send WETH as collateral into the vault. Returns transaction data for the user to sign via MetaMask.',
+      description: 'Prepare a deposit transaction to send WETH as collateral into the vault via x402. Returns transaction data for the user to sign via MetaMask.',
       parameters: {
         type: 'object',
         properties: {
           amount: { type: 'string', description: 'Amount of WETH to deposit, e.g. "0.01"' },
+          address: { type: 'string', description: 'The user\'s wallet address (0x-prefixed)' },
         },
-        required: ['amount'],
+        required: ['amount', 'address'],
       },
     },
   },
@@ -194,6 +195,7 @@ async function executeTool(name: string, input: Record<string, string>): Promise
     switch (name) {
       case 'prepare_deposit': {
         // x402 WETH deposit: hit skill server /deposit to get payment instructions
+        console.log(`[prepare_deposit] Hitting ${SKILL_SERVER_URL}/deposit?amount=${input.amount} for ${input.address}`)
         const res = await fetch(`${SKILL_SERVER_URL}/deposit?amount=${input.amount}`, {
           method: 'POST',
           headers: { 'X-From-Address': input.address || '' },
@@ -401,7 +403,9 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         return `Unknown tool: ${name}`
     }
   } catch (err) {
-    return `Error: ${err instanceof Error ? err.message : String(err)}`
+    const errMsg = err instanceof Error ? err.message : String(err)
+    console.error(`[tool:${name}] Error:`, errMsg)
+    return `Error executing ${name}: ${errMsg}`
   }
 }
 
