@@ -1,5 +1,6 @@
 export const VAULT_ABI = [
-  { name: 'deposit',  type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  { name: 'deposit',     type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
+  { name: 'depositFor', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'user', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [] },
   { name: 'borrow',   type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'recipient', type: 'address' }, { name: 'amount', type: 'uint256' }],  outputs: [] },
   { name: 'repay',    type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'onBehalfOf', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [] },
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }],                                           outputs: [] },

@@ -193,37 +193,59 @@ async function executeTool(name: string, input: Record<string, string>): Promise
   try {
     switch (name) {
       case 'prepare_deposit': {
-        const amount = parseEther(input.amount)
-        const approveData = encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [VAULT, amount] })
-        const depositData = encodeFunctionData({ abi: VAULT_ABI, functionName: 'deposit', args: [amount] })
-        const tx = {
-          type: 'transaction',
-          action: 'deposit',
-          description: `Deposit ${input.amount} WETH as collateral`,
-          transactions: [
-            {
-              to: WETH,
-              data: approveData,
-              value: '0',
-              functionName: 'approve',
-              args: { spender: VAULT, amount: amount.toString() },
-              chainId: 11142220,
-              step: 1,
-              stepDescription: 'Approve WETH spend',
-            },
-            {
-              to: VAULT,
-              data: depositData,
-              value: '0',
-              functionName: 'deposit',
-              args: { amount: amount.toString() },
-              chainId: 11142220,
-              step: 2,
-              stepDescription: 'Deposit WETH to vault',
-            },
-          ],
+        // x402 WETH deposit: hit skill server /deposit to get payment instructions
+        const res = await fetch(`${SKILL_SERVER_URL}/deposit?amount=${input.amount}`, {
+          method: 'POST',
+          headers: { 'X-From-Address': input.address || '' },
+        })
+
+        if (res.status === 402) {
+          const order = await res.json()
+          // Return approve + transfer txs for the user to sign, targeting the server wallet
+          const amount = parseEther(input.amount)
+          const approveData = encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [order.payTo as Address, amount] })
+          const transferData = encodeFunctionData({
+            abi: [{ name: 'transfer', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] }] as const,
+            functionName: 'transfer',
+            args: [order.payTo as Address, amount],
+          })
+          const tx = {
+            type: 'x402_deposit',
+            action: 'deposit',
+            description: `Deposit ${input.amount} WETH as collateral via x402`,
+            serverEndpoint: `${SKILL_SERVER_URL}/deposit?amount=${input.amount}`,
+            transactions: [
+              {
+                to: WETH,
+                data: approveData,
+                value: '0',
+                functionName: 'approve',
+                args: { spender: order.payTo, amount: amount.toString() },
+                chainId: 11142220,
+                step: 1,
+                stepDescription: 'Approve WETH for skill server',
+              },
+              {
+                to: WETH,
+                data: transferData,
+                value: '0',
+                functionName: 'transfer',
+                args: { to: order.payTo, amount: amount.toString() },
+                chainId: 11142220,
+                step: 2,
+                stepDescription: 'Transfer WETH to skill server',
+              },
+            ],
+          }
+          return `@@TX${JSON.stringify(tx)}@@TX`
         }
-        return `@@TX${JSON.stringify(tx)}@@TX`
+
+        if (res.ok) {
+          const data = await res.json()
+          return JSON.stringify(data, null, 2)
+        }
+
+        return `Deposit error ${res.status}: ${await res.text()}`
       }
 
       case 'prepare_borrow': {

@@ -8,6 +8,7 @@ import positionRouter from './routes/position'
 import creditScoreRouter from './routes/creditScore'
 import borrowCapacityRouter from './routes/borrowCapacity'
 import marketRateRouter from './routes/marketRate'
+import depositRouter from './routes/deposit'
 
 const app = express()
 app.use(express.json())
@@ -74,6 +75,9 @@ function requirePayment(price: string) {
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'clawrence-skill-server', network: 'Celo Sepolia' })
 })
+
+// x402 WETH deposit — has its own custom payment flow, no thirdweb middleware
+app.use('/deposit', depositRouter)
 
 app.use('/position', requirePayment(SKILL_PRICE), positionRouter)
 app.use('/credit-score', requirePayment(SKILL_PRICE), creditScoreRouter)

@@ -67,6 +67,14 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Deposited(msg.sender, amount);
     }
 
+    /// @notice Owner deposits WETH on behalf of a user (used by skill server x402 flow)
+    function depositFor(address user, uint256 amount) external onlyOwner nonReentrant {
+        if (amount == 0) revert ZeroAmount();
+        weth.safeTransferFrom(msg.sender, address(this), amount);
+        collateral[user] += amount;
+        emit Deposited(user, amount);
+    }
+
     function withdraw(uint256 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
         require(collateral[msg.sender] >= amount, "Insufficient collateral");
