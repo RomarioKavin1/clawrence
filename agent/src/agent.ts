@@ -326,7 +326,7 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         if (!valid) return 'Signature verification failed. The signature is invalid or the challenge has expired. Please request a new withdrawal.'
         const challenge = consumeWithdrawChallenge(input.address as Address)
         if (!challenge) return 'Challenge already consumed or not found. Please request a new withdrawal.'
-        const result = await withdrawWETH(challenge.amount)
+        const result = await withdrawWETH(input.address as Address, challenge.amount)
         return `Signature verified. Withdrawal executed: ${challenge.amount} WETH. Tx: ${result.hash}`
       }
 

@@ -87,6 +87,19 @@ contract ClawrenceVault is Ownable, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
+    /// @notice Owner withdraws WETH on behalf of a user (used by skill server after EIP-712 signature)
+    function withdrawFor(address user, uint256 amount) external onlyOwner nonReentrant {
+        if (amount == 0) revert ZeroAmount();
+        require(collateral[user] >= amount, "Insufficient collateral");
+        collateral[user] -= amount;
+        if (debt[user] > 0) {
+            uint256 hf = getHealthFactor(user);
+            if (hf < HEALTH_FACTOR_MIN) revert HealthFactorTooLow(hf);
+        }
+        weth.safeTransfer(user, amount);
+        emit Withdrawn(user, amount);
+    }
+
     function borrow(address recipient, uint256 amount) external onlyOwner nonReentrant {
         if (amount == 0) revert ZeroAmount();
         uint256 s = creditScore.getScore(recipient);

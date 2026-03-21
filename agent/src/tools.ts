@@ -82,12 +82,12 @@ export function consumeWithdrawChallenge(address: Address): WithdrawChallenge | 
 
 // ── Write tools (server-side execution) ──────────────────────────────────────
 
-export async function withdrawWETH(amountEther: string) {
+export async function withdrawWETH(userAddress: Address, amountEther: string) {
   const { client, account } = getWalletClient(PK)
   const amount = parseEther(amountEther)
   const hash = await client.writeContract({
-    address: VAULT, abi: VAULT_ABI, functionName: 'withdraw',
-    args: [amount], account, chain: client.chain,
+    address: VAULT, abi: VAULT_ABI, functionName: 'withdrawFor',
+    args: [userAddress, amount], account, chain: client.chain,
   })
   await publicClient.waitForTransactionReceipt({ hash })
   return { hash, amount: `${amountEther} WETH` }
