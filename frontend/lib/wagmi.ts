@@ -1,13 +1,13 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { http } from 'wagmi'
-import { goatTestnet3 } from './chains'
+import { celoSepolia } from './chains'
 
 export const wagmiConfig = getDefaultConfig({
   appName: 'Clawrence',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo',
-  chains: [goatTestnet3],
+  chains: [celoSepolia],
   transports: {
-    [goatTestnet3.id]: http(),
+    [celoSepolia.id]: http(),
   },
   ssr: true,
 })
