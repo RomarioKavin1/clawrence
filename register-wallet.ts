@@ -25,18 +25,18 @@ const celoSepolia = defineChain({
   testnet: true,
 })
 
-const IDENTITY_REGISTRY = '0x16977D77168D6aB0Bc3b498d40bA4392B1f4e7e1' as const
+const IDENTITY_REGISTRY = '0x8004A818BFB912233c491871b3d84c89A494BD9e' as const
 
 // Minimal ERC-8004 Identity Registry ABI for registration
 const IDENTITY_ABI = [
   {
-    name: 'registerAgent',
+    name: 'register',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [
-      { name: 'metadataURI', type: 'string' },
+      { name: 'uri', type: 'string' },
     ],
-    outputs: [{ name: 'agentId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'uint256' }],
   },
   {
     name: 'setAgentURI',
@@ -86,7 +86,7 @@ async function main() {
   const hash = await walletClient.writeContract({
     address: IDENTITY_REGISTRY,
     abi: IDENTITY_ABI,
-    functionName: 'registerAgent',
+    functionName: 'register',
     args: [metadataURI],
   })
 

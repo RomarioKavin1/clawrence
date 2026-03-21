@@ -42,8 +42,8 @@ Agents cannot scale without capital. They cannot get capital without human inter
 | CreditScore | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
 | USDC | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
 | Price Feed | `<pending deployment>` | [View](https://celo-sepolia.celoscan.io) |
-| ERC-8004 Identity Registry | `0x16977D77168D6aB0Bc3b498d40bA4392B1f4e7e1` | [View](https://celo-sepolia.celoscan.io/address/0x16977D77168D6aB0Bc3b498d40bA4392B1f4e7e1) |
-| ERC-8004 Reputation Registry | `0x99BBb3Fe39749900Fa48fA10528eb07E30f32b85` | [View](https://celo-sepolia.celoscan.io/address/0x99BBb3Fe39749900Fa48fA10528eb07E30f32b85) |
+| ERC-8004 Identity Registry | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | [View](https://celo-sepolia.celoscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) |
+| ERC-8004 Reputation Registry | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | [View](https://celo-sepolia.celoscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) |
 
 ---
 
@@ -290,8 +290,8 @@ npm run dev
 ```
 PRIVATE_KEY=
 CELO_RPC=https://forno.celo-sepolia.celo-testnet.org
-IDENTITY_REGISTRY=0x16977D77168D6aB0Bc3b498d40bA4392B1f4e7e1
-REPUTATION_REGISTRY=0x99BBb3Fe39749900Fa48fA10528eb07E30f32b85
+IDENTITY_REGISTRY=0x8004A818BFB912233c491871b3d84c89A494BD9e
+REPUTATION_REGISTRY=0x8004B663056A597Dffe9eCcC1965A193B7388713
 ```
 
 ### Skill Server
