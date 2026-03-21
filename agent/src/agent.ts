@@ -94,13 +94,14 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'prepare_borrow',
-      description: 'Prepare a borrow transaction to borrow USDC from the vault against deposited WETH collateral. Returns transaction data for the user to sign via MetaMask.',
+      description: 'Borrow USDC from the vault against deposited WETH collateral. Executed server-side (onlyOwner).',
       parameters: {
         type: 'object',
         properties: {
           amount: { type: 'string', description: 'Amount of USDC to borrow, e.g. "50"' },
+          address: { type: 'string', description: 'The borrower\'s wallet address (0x-prefixed)' },
         },
-        required: ['amount'],
+        required: ['amount', 'address'],
       },
     },
   },
@@ -251,23 +252,19 @@ async function executeTool(name: string, input: Record<string, string>): Promise
       }
 
       case 'prepare_borrow': {
+        // borrow() is onlyOwner — execute server-side
         const amount = parseUnits(input.amount, 6)
-        const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'borrow', args: ['0x0000000000000000000000000000000000000000' as Address, amount] })
-        const tx = {
-          type: 'transaction',
-          action: 'borrow',
-          description: `Borrow ${input.amount} USDC from vault`,
-          note: 'The recipient arg will be replaced with the connected wallet address by the frontend',
-          transactions: [{
-            to: VAULT,
-            data,
-            value: '0',
-            functionName: 'borrow',
-            args: { recipient: 'CONNECTED_WALLET', amount: amount.toString() },
-            chainId: 11142220,
-          }],
-        }
-        return `@@TX${JSON.stringify(tx)}@@TX`
+        const { client, account } = (await import('../lib/client.js')).getWalletClient(process.env.PRIVATE_KEY as `0x${string}`)
+        const hash = await client.writeContract({
+          address: VAULT,
+          abi: VAULT_ABI,
+          functionName: 'borrow',
+          args: [input.address as Address, amount],
+          account,
+          chain: client.chain,
+        })
+        await publicClient.waitForTransactionReceipt({ hash })
+        return `Borrowed ${input.amount} USDC for ${input.address}. Tx: ${hash}`
       }
 
       case 'prepare_repay': {
