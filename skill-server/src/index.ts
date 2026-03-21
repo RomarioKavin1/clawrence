@@ -15,7 +15,7 @@ app.use(express.json())
 
 app.use((_req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-From-Address, X-Payment, Payment-Signature')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-From-Address, X-Payment, Payment-Signature, X-Tx-Hash')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (_req.method === 'OPTIONS') { res.sendStatus(204); return }
   next()
