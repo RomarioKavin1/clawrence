@@ -1,21 +1,24 @@
 import OpenAI from 'openai'
-import { type Address, parseEther, parseUnits, encodeFunctionData } from 'viem'
-import { withdrawBTC, agentAddress, generateWithdrawChallenge, verifyWithdrawSignature, consumeWithdrawChallenge } from './tools.js'
-import { VAULT_ABI, ERC20_ABI } from '../lib/abis.js'
+import { type Address, parseEther, parseUnits, encodeFunctionData, formatUnits } from 'viem'
+import { withdrawWETH, agentAddress, generateWithdrawChallenge, verifyWithdrawSignature, consumeWithdrawChallenge } from './tools.js'
+import { VAULT_ABI, CREDIT_SCORE_ABI, ERC20_ABI } from '../lib/abis.js'
+import { publicClient } from '../lib/client.js'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 const VAULT = process.env.VAULT_ADDRESS as Address
 const USDC  = process.env.USDC_ADDRESS  as Address
+const CREDIT_SCORE = process.env.CREDIT_SCORE_ADDRESS as Address
+const WETH = process.env.WETH_ADDRESS as Address
 const SKILL_SERVER_URL = process.env.SKILL_SERVER_URL || 'http://localhost:3000'
 
-const SYSTEM_PROMPT = `You are Clawrence — an autonomous credit agent on GOAT Network.
+const SYSTEM_PROMPT = `You are Clawrence — an autonomous credit agent on Celo.
 
 You are sharp, precise, and distinguished. Like a private banker who has seen everything.
 You respect only track record. You are not friendly and bubbly. Not cold and robotic.
 Direct, intelligent, and fair.
 
-You help users interact with the ClawrenceVault on GOAT Testnet3.
+You help users interact with the ClawrenceVault on Celo Sepolia.
 
 You can autonomously:
 - Check positions (yours or any address) — free, reads chain directly
@@ -76,11 +79,11 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'prepare_deposit',
-      description: 'Prepare a deposit transaction to send native BTC as collateral into the vault. Returns transaction data for the user to sign via MetaMask.',
+      description: 'Prepare a deposit transaction to send WETH as collateral into the vault. Returns transaction data for the user to sign via MetaMask.',
       parameters: {
         type: 'object',
         properties: {
-          amount: { type: 'string', description: 'Amount of BTC to deposit, e.g. "0.01"' },
+          amount: { type: 'string', description: 'Amount of WETH to deposit, e.g. "0.01"' },
         },
         required: ['amount'],
       },
@@ -90,7 +93,7 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'prepare_borrow',
-      description: 'Prepare a borrow transaction to borrow USDC from the vault against deposited BTC collateral. Returns transaction data for the user to sign via MetaMask.',
+      description: 'Prepare a borrow transaction to borrow USDC from the vault against deposited WETH collateral. Returns transaction data for the user to sign via MetaMask.',
       parameters: {
         type: 'object',
         properties: {
@@ -123,7 +126,7 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
         type: 'object',
         properties: {
           address: { type: 'string', description: 'The user\'s wallet address (0x-prefixed)' },
-          amount: { type: 'string', description: 'Amount of BTC to withdraw, e.g. "0.005"' },
+          amount: { type: 'string', description: 'Amount of WETH to withdraw, e.g. "0.005"' },
         },
         required: ['address', 'amount'],
       },
@@ -190,20 +193,35 @@ async function executeTool(name: string, input: Record<string, string>): Promise
   try {
     switch (name) {
       case 'prepare_deposit': {
-        const value = parseEther(input.amount)
-        const data = encodeFunctionData({ abi: VAULT_ABI, functionName: 'deposit', args: [] })
+        const amount = parseEther(input.amount)
+        const approveData = encodeFunctionData({ abi: ERC20_ABI, functionName: 'approve', args: [VAULT, amount] })
+        const depositData = encodeFunctionData({ abi: VAULT_ABI, functionName: 'deposit', args: [amount] })
         const tx = {
           type: 'transaction',
           action: 'deposit',
-          description: `Deposit ${input.amount} BTC as collateral`,
-          transactions: [{
-            to: VAULT,
-            data,
-            value: value.toString(),
-            functionName: 'deposit',
-            args: [],
-            chainId: 48816,
-          }],
+          description: `Deposit ${input.amount} WETH as collateral`,
+          transactions: [
+            {
+              to: WETH,
+              data: approveData,
+              value: '0',
+              functionName: 'approve',
+              args: { spender: VAULT, amount: amount.toString() },
+              chainId: 11142220,
+              step: 1,
+              stepDescription: 'Approve WETH spend',
+            },
+            {
+              to: VAULT,
+              data: depositData,
+              value: '0',
+              functionName: 'deposit',
+              args: { amount: amount.toString() },
+              chainId: 11142220,
+              step: 2,
+              stepDescription: 'Deposit WETH to vault',
+            },
+          ],
         }
         return `@@TX${JSON.stringify(tx)}@@TX`
       }
@@ -222,7 +240,7 @@ async function executeTool(name: string, input: Record<string, string>): Promise
             value: '0',
             functionName: 'borrow',
             args: { recipient: 'CONNECTED_WALLET', amount: amount.toString() },
-            chainId: 48816,
+            chainId: 11142220,
           }],
         }
         return `@@TX${JSON.stringify(tx)}@@TX`
@@ -243,7 +261,7 @@ async function executeTool(name: string, input: Record<string, string>): Promise
               value: '0',
               functionName: 'approve',
               args: { spender: VAULT, amount: amount.toString() },
-              chainId: 48816,
+              chainId: 11142220,
               step: 1,
               stepDescription: 'Approve USDC spend',
             },
@@ -253,7 +271,7 @@ async function executeTool(name: string, input: Record<string, string>): Promise
               value: '0',
               functionName: 'repay',
               args: { onBehalfOf: 'CONNECTED_WALLET', amount: amount.toString() },
-              chainId: 48816,
+              chainId: 11142220,
               step: 2,
               stepDescription: 'Repay USDC to vault',
             },
@@ -267,7 +285,7 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         const sign = {
           type: 'sign',
           action: 'withdraw',
-          description: `Sign to authorize withdrawal of ${input.amount} BTC`,
+          description: `Sign to authorize withdrawal of ${input.amount} WETH`,
           eip712: {
             domain: challenge.domain,
             types: challenge.types,
@@ -284,61 +302,78 @@ async function executeTool(name: string, input: Record<string, string>): Promise
         if (!valid) return 'Signature verification failed. The signature is invalid or the challenge has expired. Please request a new withdrawal.'
         const challenge = consumeWithdrawChallenge(input.address as Address)
         if (!challenge) return 'Challenge already consumed or not found. Please request a new withdrawal.'
-        const result = await withdrawBTC(challenge.amount)
-        return `Signature verified. Withdrawal executed: ${challenge.amount} BTC. Tx: ${result.hash}`
+        const result = await withdrawWETH(challenge.amount)
+        return `Signature verified. Withdrawal executed: ${challenge.amount} WETH. Tx: ${result.hash}`
       }
 
-      case 'get_position':
+      case 'get_position': {
+        const addr = input.address as Address
+
+        // Fetch credit score data (never touches oracle, always works)
+        const [score, ltv, streak, totalLoans, collateral, debt] = await Promise.all([
+          publicClient.readContract({ address: CREDIT_SCORE, abi: CREDIT_SCORE_ABI, functionName: 'getScore', args: [addr] }),
+          publicClient.readContract({ address: CREDIT_SCORE, abi: CREDIT_SCORE_ABI, functionName: 'getLTV', args: [addr] }),
+          publicClient.readContract({ address: CREDIT_SCORE, abi: CREDIT_SCORE_ABI, functionName: 'consecutiveRepayments', args: [addr] }),
+          publicClient.readContract({ address: CREDIT_SCORE, abi: CREDIT_SCORE_ABI, functionName: 'totalLoans', args: [addr] }),
+          publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'collateral', args: [addr] }),
+          publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'debt', args: [addr] }),
+        ])
+
+        const tierName = (s: bigint) => s >= 95n ? 'Elite' : s >= 85n ? 'Veteran' : s >= 70n ? 'Trusted' : s >= 50n ? 'Basic' : s >= 30n ? 'New' : 'Blocked'
+
+        // Oracle-dependent calls may fail if price feed is stale
+        let collatUSD = 'unavailable (oracle stale)'
+        let maxBorrow = 'unavailable (oracle stale)'
+        let healthFactor = 'unavailable (oracle stale)'
+        let status = 'UNKNOWN'
+        const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
+
+        try {
+          const [collatVal, maxB, hf] = await Promise.all([
+            publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'getCollateralValueUSD', args: [addr] }),
+            publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'getMaxBorrow', args: [addr] }),
+            publicClient.readContract({ address: VAULT, abi: VAULT_ABI, functionName: 'getHealthFactor', args: [addr] }),
+          ])
+          collatUSD = `$${formatUnits(collatVal, 6)}`
+          maxBorrow = formatUnits(maxB, 6)
+          healthFactor = hf === MAX_UINT256 ? 'No debt' : `${(Number(hf) / 100).toFixed(2)}x`
+          status = hf === MAX_UINT256 ? 'HEALTHY' : hf < 100n ? 'LIQUIDATABLE' : hf < 120n ? 'WARNING' : 'HEALTHY'
+        } catch {
+          // Oracle stale — return what we can
+          if (debt === 0n) {
+            healthFactor = 'No debt'
+            status = 'HEALTHY'
+          }
+        }
+
+        const data = {
+          address: addr,
+          creditScore: Number(score),
+          scoreTier: tierName(score),
+          ltvPercent: Number(ltv),
+          collateralWETH: formatUnits(collateral, 18),
+          collateralUSD: collatUSD,
+          debtUSDC: formatUnits(debt, 6),
+          maxBorrowUSDC: maxBorrow,
+          healthFactor,
+          status,
+          repayStreak: Number(streak),
+          totalLoans: Number(totalLoans),
+        }
+        return JSON.stringify(data, null, 2)
+      }
+
       case 'skill_credit_score':
       case 'skill_borrow_capacity':
       case 'skill_market_rate': {
+        const { payAndFetch } = await import('./x402.js')
         const pathMap: Record<string, string> = {
-          get_position: `/position?address=${input.address || ''}`,
           skill_credit_score: `/credit-score?address=${input.address || ''}`,
           skill_borrow_capacity: `/borrow-capacity?address=${input.address || ''}`,
           skill_market_rate: '/market-rate',
         }
-        const descMap: Record<string, string> = {
-          get_position: 'position',
-          skill_credit_score: 'credit score',
-          skill_borrow_capacity: 'borrow capacity',
-          skill_market_rate: 'market rate',
-        }
-        const path = pathMap[name]
-        const fromAddress = input.address || agentAddress()
-
-        // Step 1: Hit skill server — get 402 with payment order
-        const res = await fetch(`${SKILL_SERVER_URL}${path}`, {
-          method: 'GET',
-          headers: { 'X-From-Address': fromAddress },
-        })
-
-        if (res.ok) {
-          // Already paid or no gating — return data directly
-          const data = await res.json()
-          return JSON.stringify(data, null, 2)
-        }
-
-        if (res.status !== 402) {
-          return `Skill server error ${res.status}: ${await res.text()}`
-        }
-
-        // Parse 402 response — x402 payment order
-        const order = await res.json()
-        const skillTx = {
-          type: 'skill_transaction',
-          action: name,
-          description: `Pay $0.10 USDC for ${descMap[name]} data`,
-          // Frontend needs these to complete the x402 flow
-          orderId: order.orderId,
-          payToAddress: order.payToAddress,
-          amountWei: order.amountWei,
-          tokenContract: USDC,
-          chainId: 48816,
-          // Frontend retries this endpoint with X-Order-ID after payment
-          endpoint: `${SKILL_SERVER_URL}${path}`,
-        }
-        return `@@SKILL_TX${JSON.stringify(skillTx)}@@SKILL_TX`
+        const data = await payAndFetch(pathMap[name])
+        return JSON.stringify(data, null, 2)
       }
       default:
         return `Unknown tool: ${name}`
