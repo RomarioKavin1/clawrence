@@ -3,16 +3,16 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {CreditScore} from "../src/CreditScore.sol";
-import {MockERC8004} from "./mocks/MockERC8004.sol";
+import {MockReputationRegistry} from "./mocks/MockReputationRegistry.sol";
 
 contract CreditScoreTest is Test {
     CreditScore cs;
-    MockERC8004 registry;
+    MockReputationRegistry registry;
     address vault = address(0xBEEF);
     address alice = address(0xA11CE);
 
     function setUp() public {
-        registry = new MockERC8004();
+        registry = new MockReputationRegistry();
         cs = new CreditScore(address(registry));
         cs.setVault(vault);
     }
@@ -154,16 +154,18 @@ contract CreditScoreTest is Test {
         assertEq(cs.getLTV(alice), 0);
     }
 
-    function test_erc8004WrittenWhenAgentIdSet() public {
+    function test_reputationWrittenWhenAgentIdSet() public {
         cs.setAgentId(alice, 1);
         vm.prank(vault);
         cs.updateScore(alice, 30e6, 100e6, 2 hours, true);
-        assertTrue(bytes(registry.uris(1)).length > 0);
+        (, , , , bool exists) = registry.lastFeedback(1);
+        assertTrue(exists);
     }
 
-    function test_erc8004NotWrittenWithoutAgentId() public {
+    function test_reputationNotWrittenWithoutAgentId() public {
         vm.prank(vault);
         cs.updateScore(alice, 30e6, 100e6, 2 hours, true);
-        assertEq(bytes(registry.uris(1)).length, 0);
+        (, , , , bool exists) = registry.lastFeedback(1);
+        assertFalse(exists);
     }
 }
