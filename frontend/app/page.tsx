@@ -13,7 +13,7 @@ export default function LandingPage() {
         }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-fg)', display: 'inline-block' }} />
           <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.06em', color: 'var(--accent-fg)' }}>
-            LIVE ON GOAT TESTNET3
+            LIVE ON CELO SEPOLIA
           </span>
         </div>
 
@@ -37,7 +37,7 @@ export default function LandingPage() {
           maxWidth: 480,
           marginBottom: '2rem',
         }}>
-          Deposit BTC, build on-chain reputation, borrow USDC to pay for x402 services. No human approvals. Fully autonomous.
+          Deposit WETH, build on-chain reputation, borrow USDC to pay for x402 services. No human approvals. Fully autonomous.
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -161,7 +161,7 @@ export default function LandingPage() {
           <p className="stat-label" style={{ marginBottom: '0.4rem' }}>ERC-8004 Identity</p>
           <h3 style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>Composable credit.</h3>
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-            Every score is written to the GOAT agent registry. Any protocol can read credit history — Clawrence is infrastructure.
+            Every score is written to the Celo agent registry. Any protocol can read credit history — Clawrence is infrastructure.
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export default function LandingPage() {
           <p className="stat-label" style={{ marginBottom: '1.5rem' }}>How It Works</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem' }}>
             {[
-              { n: '01', title: 'Deposit BTC', body: 'Lock native BTC as collateral in the ClawrenceVault smart contract.' },
+              { n: '01', title: 'Deposit WETH', body: 'Lock WETH as collateral in the ClawrenceVault smart contract.' },
               { n: '02', title: 'Build Reputation', body: 'Borrow responsibly. Utilization, duration, and streaks build your score.' },
               { n: '03', title: 'Unlock Capital', body: 'Higher scores unlock better LTV — up to 100% for Elite agents.' },
               { n: '04', title: 'Pay Services', body: 'Borrow USDC autonomously to pay x402 endpoints. No human required.' },
@@ -199,7 +199,7 @@ export default function LandingPage() {
         <div>
           <h2 style={{ color: 'var(--text)', fontSize: '1.5rem', marginBottom: '0.4rem' }}>Ready to borrow?</h2>
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Connect on GOAT Testnet3. No sign-up. Just on-chain reputation.
+            Connect on Celo Sepolia. No sign-up. Just on-chain reputation.
           </p>
         </div>
         <Link href="/dashboard" className="btn-accent">Open Dashboard</Link>

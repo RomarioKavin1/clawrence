@@ -5,7 +5,7 @@ import { Navbar } from '@/components/Navbar'
 
 export const metadata: Metadata = {
   title: 'Clawrence — On-chain Credit Agent',
-  description: 'Deposit BTC, build credit, borrow USDC. Not the bank. Better.',
+  description: 'Deposit WETH, build credit, borrow USDC. Not the bank. Better.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -8,7 +8,7 @@ export default function IdentityPage() {
           Identity
         </h1>
         <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-          ERC-8004 agent identities on GOAT Testnet3.
+          ERC-8004 agent identities on Celo Sepolia.
         </p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
