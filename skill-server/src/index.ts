@@ -20,19 +20,27 @@ app.use((_req, res, next) => {
   next()
 })
 
-const thirdwebClient = createThirdwebClient({
-  secretKey: process.env.THIRDWEB_SECRET_KEY!,
-})
-
-const thirdwebFacilitator = facilitator({
-  client: thirdwebClient,
-  serverWalletAddress: process.env.SERVER_WALLET_ADDRESS!,
-})
-
 const SKILL_PRICE = '0.10'
+const hasThirdwebKey = !!process.env.THIRDWEB_SECRET_KEY
+
+let thirdwebClient: any = null
+let thirdwebFacilitator: any = null
+
+if (hasThirdwebKey) {
+  thirdwebClient = createThirdwebClient({
+    secretKey: process.env.THIRDWEB_SECRET_KEY!,
+  })
+  thirdwebFacilitator = facilitator({
+    client: thirdwebClient,
+    serverWalletAddress: process.env.SERVER_WALLET_ADDRESS!,
+  })
+}
 
 function requirePayment(price: string) {
   return async (req: Request, res: Response, next: Function) => {
+    // Skip payment gate if thirdweb is not configured
+    if (!hasThirdwebKey) return next()
+
     const paymentData = req.headers['payment-signature'] as string || req.headers['x-payment'] as string
 
     try {
@@ -75,7 +83,9 @@ app.use('/market-rate', requirePayment(SKILL_PRICE), marketRateRouter)
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`Clawrence skill server running on port ${PORT}`)
-  console.log(`x402 payment: ${SKILL_PRICE} USDC per skill call (thirdweb, Celo Sepolia)`)
+  console.log(hasThirdwebKey
+    ? `x402 payment: ${SKILL_PRICE} USDC per skill call (thirdweb, Celo Sepolia)`
+    : `x402 payment: DISABLED (no THIRDWEB_SECRET_KEY) — endpoints are free`)
   startPriceKeeper()
 })
 
