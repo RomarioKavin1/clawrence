@@ -1,13 +1,16 @@
 export const VAULT_ABI = [
-  { name: 'deposit',  type: 'function', stateMutability: 'payable',     inputs: [],                                                                                outputs: [] },
+  { name: 'deposit',  type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [] },
   { name: 'borrow',   type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'recipient', type: 'address' }, { name: 'amount', type: 'uint256' }],  outputs: [] },
   { name: 'repay',    type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'onBehalfOf', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [] },
   { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'amount', type: 'uint256' }],                                           outputs: [] },
+  { name: 'setPrice', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_price', type: 'uint256' }, { name: '_timestamp', type: 'uint256' }],  outputs: [] },
   { name: 'collateral',            type: 'function', stateMutability: 'view',       inputs: [{ name: '', type: 'address' }],        outputs: [{ type: 'uint256' }] },
   { name: 'debt',                  type: 'function', stateMutability: 'view',       inputs: [{ name: '', type: 'address' }],        outputs: [{ type: 'uint256' }] },
   { name: 'getHealthFactor',       type: 'function', stateMutability: 'view',       inputs: [{ name: 'agent', type: 'address' }],   outputs: [{ type: 'uint256' }] },
   { name: 'getMaxBorrow',          type: 'function', stateMutability: 'view',       inputs: [{ name: 'agent', type: 'address' }],   outputs: [{ type: 'uint256' }] },
   { name: 'getCollateralValueUSD', type: 'function', stateMutability: 'view',       inputs: [{ name: 'agent', type: 'address' }],   outputs: [{ type: 'uint256' }] },
+  { name: 'ethUsdPrice',           type: 'function', stateMutability: 'view',       inputs: [],                                      outputs: [{ type: 'uint256' }] },
+  { name: 'priceTimestamp',        type: 'function', stateMutability: 'view',       inputs: [],                                      outputs: [{ type: 'uint256' }] },
 ] as const
 
 export const CREDIT_SCORE_ABI = [
