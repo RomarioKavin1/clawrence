@@ -123,6 +123,7 @@ export function ClawrenceChat() {
     }
 
     try {
+      let lastHash = '' as `0x${string}`
       for (const tx of txData.transactions) {
         const step = tx.step ? `Step ${tx.step}: ` : ''
         const desc = tx.stepDescription || tx.functionName
@@ -140,7 +141,7 @@ export function ClawrenceChat() {
           txDataHex = encodeFunctionData({ abi: VAULT_ABI, functionName: 'repay', args: [address, BigInt(args.amount)] })
         }
 
-        const hash = await walletClient.sendTransaction({
+        lastHash = await walletClient.sendTransaction({
           to: tx.to as `0x${string}`,
           data: txDataHex,
           value: BigInt(tx.value || '0'),
@@ -149,14 +150,47 @@ export function ClawrenceChat() {
         })
 
         setTxStatus(`${step}Confirming...`)
-        await publicClient.waitForTransactionReceipt({ hash })
+        await publicClient.waitForTransactionReceipt({ hash: lastHash })
         setTxStatus(`${step}Confirmed!`)
+
+        // Wait for nonce propagation between steps
+        if (txData.transactions.length > 1) {
+          await new Promise(r => setTimeout(r, 8000))
+        }
       }
 
-      setMessages(prev => [...prev, {
-        role: 'clawrence',
-        content: `Transaction confirmed: ${txData.description}\n\n— Clawrence`,
-      }])
+      // If this is an x402 deposit, confirm with the skill server using the last tx hash (the transfer)
+      if (txData.type === 'x402_deposit' && txData.serverEndpoint) {
+        setTxStatus('Confirming deposit with server...')
+        await new Promise(r => setTimeout(r, 5000))
+
+        const confirmRes = await fetch(txData.serverEndpoint, {
+          method: 'POST',
+          headers: {
+            'X-From-Address': address,
+            'X-Tx-Hash': lastHash as string,
+          },
+        })
+
+        if (confirmRes.ok) {
+          const data = await confirmRes.json()
+          setMessages(prev => [...prev, {
+            role: 'clawrence',
+            content: `Deposit confirmed via x402. ${data.amount} WETH deposited. Total collateral: ${data.totalCollateral} WETH.\n\n— Clawrence`,
+          }])
+        } else {
+          const errText = await confirmRes.text()
+          setMessages(prev => [...prev, {
+            role: 'clawrence',
+            content: `Deposit transfer confirmed but server confirmation failed: ${errText}\n\n— Clawrence`,
+          }])
+        }
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'clawrence',
+          content: `Transaction confirmed: ${txData.description}\n\n— Clawrence`,
+        }])
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setTxStatus(`Transaction failed: ${msg.slice(0, 80)}`)
