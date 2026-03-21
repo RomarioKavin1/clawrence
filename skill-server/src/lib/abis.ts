@@ -7,6 +7,7 @@ export const VAULT_ABI = [
   { name: 'loanTimestamp',         type: 'function', stateMutability: 'view', inputs: [{ name: '', type: 'address' }],      outputs: [{ name: '', type: 'uint256' }] },
   { name: 'lastLoanTime',          type: 'function', stateMutability: 'view', inputs: [{ name: '', type: 'address' }],      outputs: [{ name: '', type: 'uint256' }] },
   { name: 'maxBorrowAtLoan',       type: 'function', stateMutability: 'view', inputs: [{ name: '', type: 'address' }],      outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'setPrice',              type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_price', type: 'uint256' }, { name: '_timestamp', type: 'uint256' }], outputs: [] },
 ] as const
 
 export const CREDIT_SCORE_ABI = [
